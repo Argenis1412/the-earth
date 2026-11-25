@@ -84,6 +84,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
   let activeIndex = 0;
   let countUp = null;
   let currentTotalKm = 0;
+  let gentleZoomApplied = false;
   let currentUnit = 'km';
   let shareToastTimer = 0;
 
@@ -171,8 +172,12 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     if (options.fly) {
       globe.setSpin(false);
       if (options.gentleZoom) {
-        // Center on the selected point, changing zoom by at most 10%.
-        const distance = Math.max(1.3, globe.camera.position.length() * 0.9);
+        // One-time 10% zoom-in; later picks only recenter, never accumulate zoom.
+        const currentDistance = globe.camera.position.length();
+        const distance = gentleZoomApplied
+          ? currentDistance
+          : Math.max(1.3, currentDistance * 0.9);
+        gentleZoomApplied = true;
         globe.flyTo(toVec(resolved.lat, resolved.lon), distance);
       } else {
         globe.flyTo(toVec(resolved.lat, resolved.lon), Math.min(globe.camera.position.length(), 2.6));
