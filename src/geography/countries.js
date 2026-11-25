@@ -1,4 +1,6 @@
 import { normalizeText, parseCoordinates } from './coordinates.js';
+import { DEFAULT_LANG } from '../i18n/index.js';
+import { cityCountry, cityName } from '../i18n/names.js';
 
 export const CONTINENT_NAMES = [
   'América del Norte',
@@ -204,10 +206,64 @@ export function formatContinents(country) {
  * @param {Array<{name: string, country: string, lat: number, lon: number}>} cities
  */
 export function createCityIndex(cities) {
-  return cities.map((city) => ({
-    ...city,
-    normalizedName: normalizeText(city.name),
-  }));
+  return cities.map((city) => {
+    const normalizedName = normalizeText(cityName(city, DEFAULT_LANG));
+    return {
+      ...city,
+      normalizedName,
+      search: [normalizedName],
+    };
+  });
+}
+
+/**
+ * Ranks city matches for the autocomplete list.
+ * 0 = name starts with the query, 1 = a word starts with it, 2 = it appears inside.
+ * @param {string} query
+ * @param {ReturnType<typeof createCityIndex>} cityIndex
+ * @param {string} [lang]
+ * @param {number} [limit=30]
+ * @returns {Array<{label: string, sub: string, value: string}>}
+ */
+export function searchPlaces(query, cityIndex, lang = DEFAULT_LANG, limit = 30) {
+  const normalized = normalizeText(query || '');
+  if (!normalized) return [];
+
+  const matches = [];
+  for (const city of cityIndex) {
+    let rank = -1;
+    for (const term of city.search || []) {
+      if (term.startsWith(normalized)) {
+        rank = 0;
+        break;
+      }
+      if (term.split(/\s+/).some((word) => word.startsWith(normalized))) {
+        if (rank === -1 || rank > 1) rank = 1;
+        continue;
+      }
+      if (normalized.length >= 2 && term.includes(normalized) && rank === -1) {
+        rank = 2;
+      }
+    }
+    if (rank !== -1) matches.push({ city, rank });
+  }
+
+  const locale = lang === 'es' ? 'es' : 'en';
+  matches.sort((a, b) => {
+    if (a.rank !== b.rank) return a.rank - b.rank;
+    return cityName(a.city, lang).localeCompare(cityName(b.city, lang), locale);
+  });
+
+  const seen = new Set();
+  const results = [];
+  for (const { city } of matches) {
+    const label = cityName(city, lang);
+    if (seen.has(label)) continue;
+    seen.add(label);
+    results.push({ label, sub: cityCountry(city, lang), value: label });
+    if (results.length >= limit) break;
+  }
+  return results;
 }
 
 /**
@@ -242,8 +298,8 @@ export function resolveLocation(query, world, cityIndex) {
     return {
       lat: city.lat,
       lon: city.lon,
-      label: `${city.name}, ${city.country}`,
-      countryName: city.country,
+      label: `${cityName(city, DEFAULT_LANG)}, ${cityCountry(city, DEFAULT_LANG)}`,
+      countryName: cityCountry(city, DEFAULT_LANG),
     };
   }
 

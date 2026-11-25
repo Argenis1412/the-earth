@@ -265,6 +265,58 @@ input:focus-visible {
   color: #66748b;
 }
 
+.combo {
+  position: relative;
+  min-width: 0;
+}
+
+.suggest {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: calc(4 * 34px + 8px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: rgba(8, 12, 20, .96);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, .25) transparent;
+}
+
+.suggest[data-dir="up"] {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.suggest li {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 8px;
+  border-radius: 7px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.suggest li small {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.suggest li[aria-selected="true"],
+.suggest li:hover {
+  background: rgba(255, 255, 255, .08);
+}
+
 .meta {
   margin: 2px 0 8px 40px;
   min-height: 16px;

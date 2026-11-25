@@ -81,7 +81,10 @@
     <div class="body">
       <div class="slot active" data-slot="A">
         <span class="pin a">A</span>
-        <input id="inA" list="cities" placeholder="City, country or lat, lon" autocomplete="off" spellcheck="false" aria-label="Point A" data-i18n-placeholder="panel.placeholder" data-i18n-aria-label="panel.pointA">
+        <div class="combo">
+          <input id="inA" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="listA" placeholder="City, country or lat, lon" autocomplete="off" spellcheck="false" aria-label="Point A" data-i18n-placeholder="panel.placeholder" data-i18n-aria-label="panel.pointA">
+          <ul class="suggest" id="listA" role="listbox" hidden></ul>
+        </div>
         <button class="icon-btn pick" aria-label="Pick A on the globe" title="Pick on the globe" data-i18n-aria-label="panel.pickA" data-i18n-title="panel.pickTitle">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
         </button>
@@ -89,7 +92,10 @@
       <div class="meta" id="metaA"></div>
       <div class="slot" data-slot="B">
         <span class="pin b">B</span>
-        <input id="inB" list="cities" placeholder="City, country or lat, lon" autocomplete="off" spellcheck="false" aria-label="Point B" data-i18n-placeholder="panel.placeholder" data-i18n-aria-label="panel.pointB">
+        <div class="combo">
+          <input id="inB" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="listB" placeholder="City, country or lat, lon" autocomplete="off" spellcheck="false" aria-label="Point B" data-i18n-placeholder="panel.placeholder" data-i18n-aria-label="panel.pointB">
+          <ul class="suggest" id="listB" role="listbox" hidden></ul>
+        </div>
         <button class="icon-btn pick" aria-label="Pick B on the globe" title="Pick on the globe" data-i18n-aria-label="panel.pickB" data-i18n-title="panel.pickTitle">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
         </button>
@@ -132,7 +138,6 @@
       </div>
       <p id="hint" data-i18n-html="panel.hint">Examples: “Curitiba”, “Madrid”, “Japan” or coordinates like <b>-25.43, -49.27</b>.</p>
     </div>
-    <datalist id="cities"></datalist>
   </aside>
 
   <div id="loading"><div><div class="ring"></div><span data-i18n="app.loading">Drawing the map…</span></div></div>

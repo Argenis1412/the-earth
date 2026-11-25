@@ -7,10 +7,11 @@ import {
   haversineDistance,
   initialBearing,
 } from '../geography/coordinates.js';
-import { countryAt, resolveLocation } from '../geography/countries.js';
+import { countryAt, resolveLocation, searchPlaces } from '../geography/countries.js';
 import { poleAt } from '../geography/poles.js';
 import { toVec } from '../globe/createGlobe.js';
 import { getLang, t } from '../i18n/index.js';
+import { createAutocomplete } from './autocomplete.js';
 
 const formatNumber = (value) =>
   new Intl.NumberFormat(getLang() === 'es' ? 'es-ES' : 'en-US', {
@@ -39,14 +40,9 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
   const bearingValEl = $('#bearingVal');
   const flightTimeValEl = $('#flightTimeVal');
   const routeEl = $('#route');
-  const citiesListEl = $('#cities');
   const btnShareRoute = $('#btnShareRoute');
   const shareToast = $('#shareToast');
   const unitButtons = document.querySelectorAll('#result .unit-btn');
-
-  citiesListEl.innerHTML = cities
-    .map((c) => `<option value="${c.name}" label="${c.country}"></option>`)
-    .join('');
 
   /**
    * Ordered list of route stops. Currently A and B are exposed in the UI;
@@ -277,6 +273,18 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     if (k >= 1) countUp = null;
   });
 
+  stops.forEach((stop) => {
+    createAutocomplete({
+      input: stop.input,
+      listEl: document.getElementById(`list${stop.id}`),
+      search: (query) => searchPlaces(query, cityIndex, getLang()),
+      onPick: (item) => {
+        stop.input.value = item.value;
+        commitStop(stop, { fly: true });
+      },
+    });
+  });
+
   stops.forEach((stop, idx) => {
     stop.row.addEventListener('pointerdown', () => setActiveIndex(idx));
     stop.row.querySelector('.pick').addEventListener('click', () => {
@@ -285,12 +293,8 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     });
     stop.input.addEventListener('focus', () => setActiveIndex(idx));
     stop.input.addEventListener('change', () => commitStop(stop, { fly: true }));
-    stop.input.addEventListener('input', (e) => {
-      if (e.inputType === undefined || e.inputType === 'insertReplacementText') {
-        commitStop(stop, { fly: true });
-      }
-    });
     stop.input.addEventListener('keydown', (e) => {
+      if (e.defaultPrevented) return;
       if (e.key === 'Enter') {
         e.preventDefault();
         calculate();
