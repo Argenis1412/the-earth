@@ -58,6 +58,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       pt: null,
       text: '',
       error: null,
+      linkedInput: false,
       input: $('#inA'),
       meta: $('#metaA'),
       row: document.querySelector('[data-slot="A"]'),
@@ -70,6 +71,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       pt: null,
       text: '',
       error: null,
+      linkedInput: false,
       input: $('#inB'),
       meta: $('#metaB'),
       row: document.querySelector('[data-slot="B"]'),
@@ -154,8 +156,12 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       ref: resolved.ref || null,
     };
     stop.error = null;
-    if (options.click) {
+    if (options.fillInput) {
+      stop.input.value = resolved.label;
+      stop.linkedInput = true;
+    } else if (options.click) {
       stop.input.value = `${resolved.lat.toFixed(4)}, ${resolved.lon.toFixed(4)}`;
+      stop.linkedInput = false;
     }
     stop.text = stop.input.value.trim();
     setMeta(stop, `${resolved.label} · ${formatCoordinates(resolved.lat, resolved.lon)}`);
@@ -166,12 +172,17 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       globe.setSpin(false);
       globe.flyTo(toVec(resolved.lat, resolved.lon), Math.min(globe.camera.position.length(), 2.6));
     }
+
+    const other = stops.find((item) => item !== stop);
+    if (options.fillInput && other && !other.pt) setActiveIndex(stops.indexOf(other));
+    if (options.recalculate && stops.every((item) => item.pt)) calculate();
   }
 
   function clearStop(stop) {
     stop.pt = null;
     stop.text = '';
     stop.error = null;
+    stop.linkedInput = false;
     routeRenderer.syncMarkers(stops);
     setMeta(stop, stop.emptyHint ? t(stop.emptyHint) : '');
     invalidate();
@@ -214,6 +225,10 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     stops.forEach((stop) => {
       if (stop.pt) {
         if (stop.pt.ref) stop.pt.label = labelFromRef(stop.pt.ref, lang);
+        if (stop.linkedInput) {
+          stop.input.value = stop.pt.label;
+          stop.text = stop.pt.label;
+        }
         setMeta(stop, `${stop.pt.label} · ${formatCoordinates(stop.pt.lat, stop.pt.lon)}`);
       } else if (stop.error) {
         setMeta(stop, t(`error.${stop.error.code}`, { query: stop.error.query }, lang), true);
@@ -222,6 +237,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       }
     });
 
+    updateUrlParams();
     if (resultEl.hidden) return;
     if (stops[0]?.pt && stops[1]?.pt) {
       const bearing = initialBearing(stops[0].pt, stops[1].pt);
@@ -333,6 +349,9 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       setMeta(stop, t('panel.pickHint', { id: stop.id }));
     });
     stop.input.addEventListener('focus', () => setActiveIndex(idx));
+    stop.input.addEventListener('input', () => {
+      stop.linkedInput = false;
+    });
     stop.input.addEventListener('change', () => commitStop(stop, { fly: true }));
     stop.input.addEventListener('keydown', (e) => {
       if (e.defaultPrevented) return;

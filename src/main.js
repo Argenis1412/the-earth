@@ -86,7 +86,7 @@ async function init() {
   const countryPanel = createCountryPanel({
     world,
     onSetAsStop: (slotId, point) => {
-      panel.setPoint(slotId, point, { fly: true });
+      panel.setPoint(slotId, point, { fly: true, fillInput: true, recalculate: true });
       // Expand the calculator panel if collapsed
       const panelEl = $('#panel');
       if (panelEl?.classList.contains('collapsed')) {
