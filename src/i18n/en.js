@@ -1,0 +1,57 @@
+const en = {
+  'app.title': 'Interactive globe',
+  'app.heading': 'Globe',
+  'app.hint': 'Drag to rotate · scroll or pinch to zoom · click to mark points',
+  'app.loading': 'Drawing the map…',
+  'app.webglError': 'Your browser could not start WebGL.',
+  'app.initError': 'The globe could not be initialized.',
+
+  'tools.spin': 'Spin',
+  'tools.reset': 'Reset view',
+  'lang.label': 'Language',
+
+  'countryCard.label': 'Country details',
+  'countryCard.name': 'Country',
+  'countryCard.sub': 'Continent · ISO',
+  'countryCard.close': 'Close details',
+  'country.capital': 'Capital',
+  'country.population': 'Population',
+  'country.languages': 'Languages',
+  'country.currency': 'Currency',
+  'country.setAs': 'Set in calculator:',
+  'country.origin': 'Origin',
+  'country.destination': 'Destination',
+
+  'panel.aria': 'Distance calculator',
+  'panel.title': 'Distance between two points',
+  'panel.collapse': 'Collapse panel',
+  'panel.placeholder': 'City, country or lat, lon',
+  'panel.pointA': 'Point A',
+  'panel.pointB': 'Point B',
+  'panel.pickA': 'Pick A on the globe',
+  'panel.pickB': 'Pick B on the globe',
+  'panel.pickTitle': 'Pick on the globe',
+  'panel.emptyHint': 'Click the globe or type a place',
+  'panel.calc': 'Calculate distance',
+  'panel.swap': 'Swap A and B',
+  'panel.clear': 'Clear',
+  'panel.unitLabel': 'Distance unit',
+  'panel.missingPoint': 'This point is missing: click the globe or type a place',
+  'panel.pickHint': 'Click the globe to set point {id}',
+  'panel.hint':
+    'Examples: “Curitiba”, “Madrid”, “Japan” or coordinates like <b>-25.43, -49.27</b>.',
+
+  'result.bearing': 'Initial bearing',
+  'result.flightTime': 'Estimated time',
+  'result.speed': 'at 850 km/h',
+  'result.share': 'Share link',
+  'result.copied': 'Link copied!',
+  'result.note':
+    'Great-circle distance · Haversine formula, mean radius 6371 km',
+
+  'place.ocean': 'Open ocean',
+  'error.COORDS_OUT_OF_RANGE': 'Coordinates out of range (lat ±90, lon ±180)',
+  'error.NOT_FOUND': 'I can’t find “{query}”. Try another city, a country or “lat, lon”.',
+};
+
+export default en;

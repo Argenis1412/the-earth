@@ -63,8 +63,8 @@ test('convertDistance, bearingToCompass, formatBearing, and formatFlightTime cal
   assert.equal(bearingToCompass(41), 'NE');
   assert.equal(bearingToCompass(90), 'E');
   assert.equal(bearingToCompass(180), 'S');
-  assert.equal(bearingToCompass(270), 'O');
-  assert.equal(bearingToCompass(315), 'NO');
+  assert.equal(bearingToCompass(270, 'es'), 'O');
+  assert.equal(bearingToCompass(315, 'es'), 'NO');
 
   assert.equal(formatBearing(41.2), '41° NE');
   assert.equal(formatBearing(0), '0° N');

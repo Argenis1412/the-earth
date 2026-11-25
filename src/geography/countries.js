@@ -262,5 +262,5 @@ export function resolveLocation(query, world, cityIndex) {
     };
   }
 
-  return { error: `No encuentro «${trimmed}». Prueba otra ciudad, un país o «lat, lon».` };
+  return { error: 'NOT_FOUND', query: trimmed };
 }

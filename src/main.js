@@ -13,6 +13,8 @@ import { setupInteractions } from './globe/interactions.js';
 import { createRouteRenderer } from './globe/routeRenderer.js';
 import { createDistancePanel } from './ui/distancePanel.js';
 import { createCountryPanel } from './ui/countryPanel.js';
+import { applyStaticTranslations } from './i18n/dom.js';
+import { SUPPORTED, getLang, onLangChange, setLang, t } from './i18n/index.js';
 
 const $ = (selector) => document.querySelector(selector);
 const loadingEl = $('#loading');
@@ -21,7 +23,27 @@ const showFailure = (message) => {
   loadingEl.innerHTML = `<div style="max-width:36ch;text-align:center;line-height:1.5">${message}</div>`;
 };
 
+function initLanguage() {
+  const urlLang = new URLSearchParams(window.location.search).get('lang');
+  setLang(SUPPORTED.includes(urlLang) ? urlLang : getLang());
+  applyStaticTranslations();
+
+  const buttons = document.querySelectorAll('.lang-btn');
+  const syncPressed = () => {
+    buttons.forEach((btn) => {
+      btn.setAttribute('aria-pressed', String(btn.dataset.lang === getLang()));
+    });
+  };
+  syncPressed();
+  buttons.forEach((btn) => btn.addEventListener('click', () => setLang(btn.dataset.lang)));
+  onLangChange(() => {
+    syncPressed();
+    applyStaticTranslations();
+  });
+}
+
 async function init() {
+  initLanguage();
   const { default: worldData } = await import('./data/world.json');
   const world = decodeWorld(worldData);
   const colors = colorCountries(world);
@@ -43,7 +65,7 @@ async function init() {
     });
   } catch (error) {
     console.error(error);
-    showFailure('Tu navegador no pudo iniciar WebGL.');
+    showFailure(t('app.webglError'));
     return;
   }
 
@@ -122,5 +144,5 @@ async function init() {
 
 init().catch((error) => {
   console.error(error);
-  showFailure('No se pudo inicializar el globo terráqueo.');
+  showFailure(t('app.initError'));
 });

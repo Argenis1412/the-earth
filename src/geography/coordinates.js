@@ -1,3 +1,5 @@
+import { DEFAULT_LANG } from '../i18n/index.js';
+
 export const DEG_TO_RAD = Math.PI / 180;
 export const EARTH_RADIUS_KM = 6371.0088;
 export const KM_PER_MILE = 1.609344;
@@ -9,6 +11,15 @@ const COMPASS_POINTS_ES = [
   'S', 'SSO', 'SO', 'OSO',
   'O', 'ONO', 'NO', 'NNO',
 ];
+
+const COMPASS_POINTS_EN = [
+  'N', 'NNE', 'NE', 'ENE',
+  'E', 'ESE', 'SE', 'SSE',
+  'S', 'SSW', 'SW', 'WSW',
+  'W', 'WNW', 'NW', 'NNW',
+];
+
+const COMPASS_POINTS = { en: COMPASS_POINTS_EN, es: COMPASS_POINTS_ES };
 
 /**
  * Converts a distance in kilometers to the requested unit ('km', 'mi', 'NM').
@@ -29,24 +40,26 @@ export function convertDistance(km, unit = 'km') {
 }
 
 /**
- * Converts bearing degrees [0, 360) into a Spanish 16-wind compass abbreviation.
+ * Converts bearing degrees [0, 360) into a compass abbreviation in the given language.
  * @param {number} degrees
+ * @param {'en' | 'es'} [lang]
  * @returns {string}
  */
-export function bearingToCompass(degrees) {
+export function bearingToCompass(degrees, lang = DEFAULT_LANG) {
   const normalized = ((degrees % 360) + 360) % 360;
   const index = Math.round(normalized / 22.5) % 16;
-  return COMPASS_POINTS_ES[index];
+  return (COMPASS_POINTS[lang] || COMPASS_POINTS[DEFAULT_LANG])[index];
 }
 
 /**
  * Formats bearing in degrees and compass point (e.g., "41° NE").
  * @param {number} degrees
+ * @param {'en' | 'es'} [lang]
  * @returns {string}
  */
-export function formatBearing(degrees) {
+export function formatBearing(degrees, lang = DEFAULT_LANG) {
   const normalized = Math.round(((degrees % 360) + 360) % 360);
-  const compass = bearingToCompass(normalized);
+  const compass = bearingToCompass(normalized, lang);
   return `${normalized}° ${compass}`;
 }
 
@@ -106,7 +119,7 @@ export function parseCoordinates(query) {
   const lat = Number(match[1]);
   const lon = Number(match[2]);
   if (Math.abs(lat) > 90 || Math.abs(lon) > 180) {
-    return { error: 'Coordenadas fuera de rango (lat ±90, lon ±180)' };
+    return { error: 'COORDS_OUT_OF_RANGE' };
   }
 
   return { lat, lon };

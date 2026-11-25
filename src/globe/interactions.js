@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { formatCoordinates } from '../geography/coordinates.js';
 import { countryAt, formatContinents } from '../geography/countries.js';
+import { t } from '../i18n/index.js';
 import { toLatLon } from './createGlobe.js';
 import { drawCountryPath } from './mapTextures.js';
 
@@ -70,7 +71,7 @@ export function setupInteractions({ globe, world, tooltipEl, onGlobeClick }) {
       setHighlight(country);
       tooltipEl.innerHTML = country
         ? `<b>${country.name}</b><span>${formatContinents(country)} · ${formatCoordinates(coords.lat, coords.lon)}</span>`
-        : `<b>Océano</b><span>${formatCoordinates(coords.lat, coords.lon)}</span>`;
+        : `<b>${t('place.ocean')}</b><span>${formatCoordinates(coords.lat, coords.lon)}</span>`;
       tooltipEl.style.left = `${e.clientX}px`;
       tooltipEl.style.top = `${e.clientY}px`;
       tooltipEl.style.opacity = '1';

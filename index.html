@@ -1,105 +1,109 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Globo terráqueo interactivo</title>
+  <title>Interactive globe</title>
 </head>
 <body>
   <div id="stage"></div>
 
   <div id="title">
     <div>
-      <h1>Globo terráqueo</h1>
-      <p>Arrastra para girar · rueda o pellizco para acercar · clic para marcar puntos</p>
+      <h1 data-i18n="app.heading">Globe</h1>
+      <p data-i18n="app.hint">Drag to rotate · scroll or pinch to zoom · click to mark points</p>
     </div>
     <div id="tools">
-      <button class="chip" id="btnSpin" aria-pressed="true"><span class="dot"></span>Rotación</button>
-      <button class="chip" id="btnReset">Restablecer vista</button>
+      <div class="lang-toggle" role="group" data-i18n-aria-label="lang.label">
+        <button type="button" class="lang-btn" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" class="lang-btn" data-lang="es" aria-pressed="false">ES</button>
+      </div>
+      <button class="chip" id="btnSpin" aria-pressed="true"><span class="dot"></span><span data-i18n="tools.spin">Spin</span></button>
+      <button class="chip" id="btnReset" data-i18n="tools.reset">Reset view</button>
     </div>
   </div>
 
   <div id="tip" role="status"></div>
 
-  <aside id="countryCard" class="glass" aria-label="Ficha de país" hidden>
+  <aside id="countryCard" class="glass" aria-label="Country details" data-i18n-aria-label="countryCard.label" hidden>
     <header class="country-header">
       <div class="country-flag-wrap">
         <span class="country-flag" id="countryFlag">🌐</span>
       </div>
       <div class="country-title-box">
-        <h3 id="countryName">País</h3>
-        <span class="country-sub" id="countrySub">Continente · ISO</span>
+        <h3 id="countryName" data-i18n="countryCard.name">Country</h3>
+        <span class="country-sub" id="countrySub" data-i18n="countryCard.sub">Continent · ISO</span>
       </div>
-      <button class="icon-btn country-close" id="btnCountryClose" aria-label="Cerrar ficha" title="Cerrar ficha">
+      <button class="icon-btn country-close" id="btnCountryClose" aria-label="Close details" title="Close details" data-i18n-aria-label="countryCard.close" data-i18n-title="countryCard.close">
         <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
     </header>
     <div class="country-body">
       <div class="country-grid">
         <div class="country-item">
-          <span class="country-label">Capital</span>
+          <span class="country-label" data-i18n="country.capital">Capital</span>
           <b class="country-val" id="countryCapital">—</b>
         </div>
         <div class="country-item">
-          <span class="country-label">Población</span>
+          <span class="country-label" data-i18n="country.population">Population</span>
           <b class="country-val" id="countryPopulation">—</b>
         </div>
         <div class="country-item">
-          <span class="country-label">Idiomas</span>
+          <span class="country-label" data-i18n="country.languages">Languages</span>
           <b class="country-val" id="countryLanguages">—</b>
         </div>
         <div class="country-item">
-          <span class="country-label">Moneda</span>
+          <span class="country-label" data-i18n="country.currency">Currency</span>
           <b class="country-val" id="countryCurrency">—</b>
         </div>
       </div>
       <div class="country-actions">
-        <span class="country-action-label">Fijar en calculadora:</span>
+        <span class="country-action-label" data-i18n="country.setAs">Set in calculator:</span>
         <div class="country-action-btns">
           <button type="button" class="chip country-stop-btn" id="btnCountryAsA">
-            <span class="pin a">A</span> Origen
+            <span class="pin a">A</span> <span data-i18n="country.origin">Origin</span>
           </button>
           <button type="button" class="chip country-stop-btn" id="btnCountryAsB">
-            <span class="pin b">B</span> Destino
+            <span class="pin b">B</span> <span data-i18n="country.destination">Destination</span>
           </button>
         </div>
       </div>
     </div>
   </aside>
 
-  <aside id="panel" class="glass" aria-label="Calculadora de distancia">
+  <aside id="panel" class="glass" aria-label="Distance calculator" data-i18n-aria-label="panel.aria">
     <header>
-      <h2>Distancia entre dos puntos</h2>
-      <button class="icon-btn" id="btnCollapse" aria-label="Plegar panel" aria-expanded="true">
+      <h2 data-i18n="panel.title">Distance between two points</h2>
+      <button class="icon-btn" id="btnCollapse" aria-label="Collapse panel" data-i18n-aria-label="panel.collapse" aria-expanded="true">
         <svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>
       </button>
     </header>
     <div class="body">
       <div class="slot active" data-slot="A">
         <span class="pin a">A</span>
-        <input id="inA" list="cities" placeholder="Ciudad, país o lat, lon" autocomplete="off" spellcheck="false" aria-label="Punto A">
-        <button class="icon-btn pick" aria-label="Elegir A en el globo" title="Elegir en el globo">
+        <input id="inA" list="cities" placeholder="City, country or lat, lon" autocomplete="off" spellcheck="false" aria-label="Point A" data-i18n-placeholder="panel.placeholder" data-i18n-aria-label="panel.pointA">
+        <button class="icon-btn pick" aria-label="Pick A on the globe" title="Pick on the globe" data-i18n-aria-label="panel.pickA" data-i18n-title="panel.pickTitle">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
         </button>
       </div>
-      <div class="meta" id="metaA">Haz clic en el globo o escribe un lugar</div>
+      <div class="meta" id="metaA"></div>
       <div class="slot" data-slot="B">
         <span class="pin b">B</span>
-        <input id="inB" list="cities" placeholder="Ciudad, país o lat, lon" autocomplete="off" spellcheck="false" aria-label="Punto B">
-        <button class="icon-btn pick" aria-label="Elegir B en el globo" title="Elegir en el globo">
+        <input id="inB" list="cities" placeholder="City, country or lat, lon" autocomplete="off" spellcheck="false" aria-label="Point B" data-i18n-placeholder="panel.placeholder" data-i18n-aria-label="panel.pointB">
+        <button class="icon-btn pick" aria-label="Pick B on the globe" title="Pick on the globe" data-i18n-aria-label="panel.pickB" data-i18n-title="panel.pickTitle">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
         </button>
       </div>
       <div class="meta" id="metaB"></div>
       <div class="actions">
-        <button class="primary" id="btnCalc">Calcular distancia</button>
-        <button class="ghost" id="btnSwap" aria-label="Intercambiar A y B" title="Intercambiar A y B">⇄</button>
-        <button class="ghost" id="btnClear">Limpiar</button>
+        <button class="primary" id="btnCalc" data-i18n="panel.calc">Calculate distance</button>
+        <button class="ghost" id="btnSwap" aria-label="Swap A and B" title="Swap A and B" data-i18n-aria-label="panel.swap" data-i18n-title="panel.swap">⇄</button>
+        <button class="ghost" id="btnClear" data-i18n="panel.clear">Clear</button>
       </div>
       <div id="result" hidden>
         <div class="result-header">
           <div class="km"><span id="kmVal">0</span><small id="unitLabel">km</small></div>
-          <div class="unit-toggle" role="group" aria-label="Unidad de distancia">
+          <div class="unit-toggle" role="group" aria-label="Distance unit" data-i18n-aria-label="panel.unitLabel">
             <button type="button" class="unit-btn active" data-unit="km">km</button>
             <button type="button" class="unit-btn" data-unit="mi">mi</button>
             <button type="button" class="unit-btn" data-unit="NM">NM</button>
@@ -108,30 +112,30 @@
         <div class="route" id="route"></div>
         <div class="stats-grid">
           <div class="stat-card">
-            <span class="stat-title">Rumbo inicial</span>
+            <span class="stat-title" data-i18n="result.bearing">Initial bearing</span>
             <b class="stat-val" id="bearingVal">—</b>
           </div>
           <div class="stat-card">
-            <span class="stat-title">Tiempo estimado</span>
+            <span class="stat-title" data-i18n="result.flightTime">Estimated time</span>
             <b class="stat-val" id="flightTimeVal">—</b>
-            <span class="stat-sub">a 850 km/h</span>
+            <span class="stat-sub" data-i18n="result.speed">at 850 km/h</span>
           </div>
         </div>
         <div class="share-row">
           <button type="button" class="ghost share-btn" id="btnShareRoute">
             <svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
-            <span>Compartir enlace</span>
+            <span data-i18n="result.share">Share link</span>
           </button>
-          <span class="share-toast" id="shareToast">¡Enlace copiado!</span>
+          <span class="share-toast" id="shareToast" data-i18n="result.copied">Link copied!</span>
         </div>
-        <div class="note">Distancia ortodrómica (círculo máximo) · fórmula de Haversine, radio medio 6371 km</div>
+        <div class="note" data-i18n="result.note">Great-circle distance · Haversine formula, mean radius 6371 km</div>
       </div>
-      <p id="hint">Ejemplos: «Curitiba», «Madrid», «Japón» o coordenadas como <b>-25.43, -49.27</b>.</p>
+      <p id="hint" data-i18n-html="panel.hint">Examples: “Curitiba”, “Madrid”, “Japan” or coordinates like <b>-25.43, -49.27</b>.</p>
     </div>
     <datalist id="cities"></datalist>
   </aside>
 
-  <div id="loading"><div><div class="ring"></div>Dibujando el mapa…</div></div>
+  <div id="loading"><div><div class="ring"></div><span data-i18n="app.loading">Drawing the map…</span></div></div>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

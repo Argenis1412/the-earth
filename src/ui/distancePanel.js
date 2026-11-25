@@ -9,9 +9,12 @@ import {
 } from '../geography/coordinates.js';
 import { countryAt, resolveLocation } from '../geography/countries.js';
 import { toVec } from '../globe/createGlobe.js';
+import { getLang, t } from '../i18n/index.js';
 
 const formatNumber = (value) =>
-  new Intl.NumberFormat('es-ES', { maximumFractionDigits: value < 100 ? 1 : 0 }).format(value);
+  new Intl.NumberFormat(getLang() === 'es' ? 'es-ES' : 'en-US', {
+    maximumFractionDigits: value < 100 ? 1 : 0,
+  }).format(value);
 
 /**
  * Controls the distance calculator panel, using a `stops[]` collection model
@@ -38,7 +41,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
   const citiesListEl = $('#cities');
   const btnShareRoute = $('#btnShareRoute');
   const shareToast = $('#shareToast');
-  const unitButtons = document.querySelectorAll('.unit-btn');
+  const unitButtons = document.querySelectorAll('#result .unit-btn');
 
   citiesListEl.innerHTML = cities
     .map((c) => `<option value="${c.name}" label="${c.country}"></option>`)
@@ -58,7 +61,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       input: $('#inA'),
       meta: $('#metaA'),
       row: document.querySelector('[data-slot="A"]'),
-      emptyHint: 'Haz clic en el globo o escribe un lugar',
+      emptyHint: 'panel.emptyHint',
     },
     {
       id: 'B',
@@ -72,6 +75,8 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       emptyHint: '',
     },
   ];
+
+  setMeta(stops[0], t(stops[0].emptyHint));
 
   let activeIndex = 0;
   let countUp = null;
@@ -160,7 +165,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     stop.pt = null;
     stop.text = '';
     routeRenderer.syncMarkers(stops);
-    setMeta(stop, stop.emptyHint);
+    setMeta(stop, stop.emptyHint ? t(stop.emptyHint) : '');
     invalidate();
   }
 
@@ -175,7 +180,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       stop.pt = null;
       stop.text = text;
       routeRenderer.syncMarkers(stops);
-      setMeta(stop, resolved.error, true);
+      setMeta(stop, t('error.' + resolved.error, { query: resolved.query }), true);
       invalidate();
       return false;
     }
@@ -189,7 +194,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       if (text && (text !== stop.text || !stop.pt)) {
         commitStop(stop);
       } else if (!text && !stop.pt) {
-        setMeta(stop, 'Falta este punto: haz clic en el globo o escribe un lugar', true);
+        setMeta(stop, t('panel.missingPoint'), true);
       }
     }
 
@@ -222,7 +227,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
 
     if (stops.length >= 2 && stops[0].pt && stops[1].pt) {
       const bearing = initialBearing(stops[0].pt, stops[1].pt);
-      bearingValEl.textContent = formatBearing(bearing);
+      bearingValEl.textContent = formatBearing(bearing, getLang());
       flightTimeValEl.textContent = formatFlightTime(totalKm, 850);
     }
 
@@ -251,7 +256,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       {
         lat: coords.lat,
         lon: coords.lon,
-        label: country ? country.name : 'Océano / mar abierto',
+        label: country ? country.name : t('place.ocean'),
       },
       { click: true },
     );
@@ -271,7 +276,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     stop.row.addEventListener('pointerdown', () => setActiveIndex(idx));
     stop.row.querySelector('.pick').addEventListener('click', () => {
       setActiveIndex(idx);
-      setMeta(stop, `Haz clic en el globo para fijar el punto ${stop.id}`);
+      setMeta(stop, t('panel.pickHint', { id: stop.id }));
     });
     stop.input.addEventListener('focus', () => setActiveIndex(idx));
     stop.input.addEventListener('change', () => commitStop(stop, { fly: true }));
