@@ -1,21 +1,23 @@
 import { DEG_TO_RAD } from '../geography/coordinates.js';
+import { DEFAULT_LANG, t } from '../i18n/index.js';
+import { countryName } from '../i18n/names.js';
 
 const CONTINENT_LABELS = [
-  { t: ['AMÉRICA', 'DEL NORTE'], lon: -101, lat: 51 },
-  { t: ['AMÉRICA', 'DEL SUR'], lon: -60, lat: -14 },
-  { t: ['EUROPA'], lon: 16, lat: 52, size: 38 },
-  { t: ['ÁFRICA'], lon: 19, lat: 5 },
-  { t: ['ASIA'], lon: 92, lat: 46 },
-  { t: ['OCEANÍA'], lon: 134, lat: -25, size: 42 },
-  { t: ['ANTÁRTIDA'], lon: 0, lat: -77, size: 38 },
+  { t: ['map.northAmerica.1', 'map.northAmerica.2'], lon: -101, lat: 51 },
+  { t: ['map.southAmerica.1', 'map.southAmerica.2'], lon: -60, lat: -14 },
+  { t: ['map.europe'], lon: 16, lat: 52, size: 38 },
+  { t: ['map.africa'], lon: 19, lat: 5 },
+  { t: ['map.asia'], lon: 92, lat: 46 },
+  { t: ['map.oceania'], lon: 134, lat: -25, size: 42 },
+  { t: ['map.antarctica'], lon: 0, lat: -77, size: 38 },
 ];
 
 const OCEAN_LABELS = [
-  { t: 'OCÉANO PACÍFICO', lon: -140, lat: 6 },
-  { t: 'OCÉANO PACÍFICO', lon: 152, lat: 15 },
-  { t: 'OCÉANO ATLÁNTICO', lon: -32, lat: 21 },
-  { t: 'OCÉANO ATLÁNTICO', lon: -14, lat: -30 },
-  { t: 'OCÉANO ÍNDICO', lon: 78, lat: -22 },
+  { t: 'map.pacific', lon: -140, lat: 6 },
+  { t: 'map.pacific', lon: 152, lat: 15 },
+  { t: 'map.atlantic', lon: -32, lat: 21 },
+  { t: 'map.atlantic', lon: -14, lat: -30 },
+  { t: 'map.indian', lon: 78, lat: -22 },
 ];
 
 const isOnSeam = (p, q) =>
@@ -132,9 +134,10 @@ function drawMapText(ctx, project, lines, lon, lat, opts) {
  * @param {string[]} colors
  * @param {number} width
  * @param {number} height
+ * @param {'en' | 'es'} [lang]
  * @returns {HTMLCanvasElement}
  */
-export function drawBaseMap(world, colors, width, height) {
+export function drawBaseMap(world, colors, width, height, lang = DEFAULT_LANG) {
   const cv = document.createElement('canvas');
   cv.width = width;
   cv.height = height;
@@ -193,7 +196,7 @@ export function drawBaseMap(world, colors, width, height) {
 
   // Ocean and continent labels
   OCEAN_LABELS.forEach((item) =>
-    drawMapText(ctx, project, [item.t], item.lon, item.lat, {
+    drawMapText(ctx, project, [t(item.t, {}, lang)], item.lon, item.lat, {
       font: `italic 400 ${34 * scale}px system-ui, sans-serif`,
       fill: 'rgba(176,212,238,.5)',
       sp: 7 * scale,
@@ -202,7 +205,7 @@ export function drawBaseMap(world, colors, width, height) {
   );
 
   CONTINENT_LABELS.forEach((item) =>
-    drawMapText(ctx, project, item.t, item.lon, item.lat, {
+    drawMapText(ctx, project, item.t.map((key) => t(key, {}, lang)), item.lon, item.lat, {
       font: `700 ${(item.size || 46) * scale}px system-ui, sans-serif`,
       fill: 'rgba(255,248,230,.78)',
       stroke: 'rgba(30,22,10,.4)',
@@ -245,9 +248,10 @@ export function drawSpecMap(world, width, height) {
  * @param {object} world
  * @param {number} width
  * @param {number} height
+ * @param {'en' | 'es'} [lang]
  * @returns {HTMLCanvasElement}
  */
-export function drawCountryLabels(world, width, height) {
+export function drawCountryLabels(world, width, height, lang = DEFAULT_LANG) {
   const cv = document.createElement('canvas');
   cv.width = width;
   cv.height = height;
@@ -259,16 +263,17 @@ export function drawCountryLabels(world, width, height) {
   [...world.countries]
     .sort((a, b) => b.area - a.area)
     .forEach((country) => {
-      if (!country.main || country.name === 'Antártida' || country.area < 6) return;
+      if (!country.main || country.cont === 6 || country.area < 6) return;
       const [lon, lat] = country.main.c;
       if (Math.abs(lat) > 72) return;
 
+      const label = countryName(country.name, lang);
       const k = Math.min(1 / Math.cos(lat * DEG_TO_RAD), 4);
       const boxWidth = ((country.main.bbox[2] - country.main.bbox[0]) / 360) * width;
 
       for (let f = 24 * scale; f >= 13 * scale; f -= 2 * scale) {
         ctx.font = `600 ${f}px system-ui, sans-serif`;
-        const w = ctx.measureText(country.name).width * k;
+        const w = ctx.measureText(label).width * k;
         const h = f * 1.25;
         const [x, y] = project(lon, lat);
         if (w > boxWidth * 0.92) continue;
@@ -278,7 +283,7 @@ export function drawCountryLabels(world, width, height) {
           return;
         }
         placed.push(rect);
-        drawMapText(ctx, project, [country.name], lon, lat, {
+        drawMapText(ctx, project, [label], lon, lat, {
           font: ctx.font,
           fill: '#fffbea',
           stroke: 'rgba(14,20,10,.8)',

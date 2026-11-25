@@ -1,15 +1,22 @@
 import { normalizeText, parseCoordinates } from './coordinates.js';
-import { DEFAULT_LANG } from '../i18n/index.js';
-import { cityCountry, cityName } from '../i18n/names.js';
+import { DEFAULT_LANG, t } from '../i18n/index.js';
+import {
+  cityCountry,
+  cityLabel,
+  cityName,
+  countryName,
+  labelFromRef,
+} from '../i18n/names.js';
+import { getCountryDetails } from '../data/countryDetails.js';
 
 export const CONTINENT_NAMES = [
-  'América del Norte',
-  'América del Sur',
-  'Europa',
-  'África',
-  'Asia',
-  'Oceanía',
-  'Antártida',
+  'continent.northAmerica',
+  'continent.southAmerica',
+  'continent.europe',
+  'continent.africa',
+  'continent.asia',
+  'continent.oceania',
+  'continent.antarctica',
 ];
 
 const PALETTE = [
@@ -157,7 +164,7 @@ export function colorCountries(world) {
   }
 
   return world.countries.map((country, i) =>
-    country.name === 'Antártida' || country.name === 'Groenlandia' ? '#e4e9e5' : PALETTE[assigned[i]],
+    country.cont === 6 || country.name === 'Groenlandia' ? '#e4e9e5' : PALETTE[assigned[i]],
   );
 }
 
@@ -191,27 +198,32 @@ export function countryAt(world, lon, lat) {
 }
 
 /**
- * Formats the continent(s) label in Spanish for a decoded country.
+ * Formats the continent(s) label in the requested language for a decoded country.
  * @param {{cont: number, alt?: number}} country
+ * @param {'en' | 'es'} [lang]
  * @returns {string}
  */
-export function formatContinents(country) {
-  return country.alt != null
-    ? `${CONTINENT_NAMES[country.cont]} y ${CONTINENT_NAMES[country.alt]}`
-    : CONTINENT_NAMES[country.cont];
+export function formatContinents(country, lang = DEFAULT_LANG) {
+  const primary = t(CONTINENT_NAMES[country.cont], {}, lang);
+  if (country.alt == null) return primary;
+  return t('continent.pair', { a: primary, b: t(CONTINENT_NAMES[country.alt], {}, lang) }, lang);
 }
 
 /**
- * Builds a normalized search index for the city catalog.
- * @param {Array<{name: string, country: string, lat: number, lon: number}>} cities
+ * Builds a normalized search index for the city catalog, including both languages.
+ * @param {Array<{name: {en: string, es: string}, country: string, lat: number, lon: number}>} cities
  */
 export function createCityIndex(cities) {
   return cities.map((city) => {
     const normalizedName = normalizeText(cityName(city, DEFAULT_LANG));
+    const search = [...new Set([
+      normalizeText(cityName(city, 'en')),
+      normalizeText(cityName(city, 'es')),
+    ])];
     return {
       ...city,
       normalizedName,
-      search: [normalizedName],
+      search,
     };
   });
 }
@@ -267,54 +279,93 @@ export function searchPlaces(query, cityIndex, lang = DEFAULT_LANG, limit = 30) 
 }
 
 /**
- * Resolves a user query (coordinates, city name, or country name) into a geographic point.
+ * Resolves a user query (coordinates, pole, city name, or country name) into a
+ * geographic point. The returned label follows the requested language and the
+ * `ref` object lets callers rebuild it later without re-parsing the input.
  * @param {string} query
  * @param {ReturnType<typeof decodeWorld>} world
  * @param {ReturnType<typeof createCityIndex>} cityIndex
+ * @param {'en' | 'es'} [lang]
  */
-export function resolveLocation(query, world, cityIndex) {
+export function resolveLocation(query, world, cityIndex, lang = DEFAULT_LANG) {
   const trimmed = query.trim();
   if (!trimmed) return null;
+
+  const normalized = normalizeText(trimmed);
+
+  for (const id of ['north', 'south']) {
+    const titles = ['en', 'es'].map((code) => normalizeText(t(`pole.${id}.title`, {}, code)));
+    if (titles.includes(normalized)) {
+      const ref = { kind: 'pole', id };
+      return {
+        lat: id === 'north' ? 90 : -90,
+        lon: 0,
+        label: labelFromRef(ref, lang),
+        ref,
+      };
+    }
+  }
 
   const parsedCoords = parseCoordinates(trimmed);
   if (parsedCoords) {
     if ('error' in parsedCoords) return parsedCoords;
     const country = countryAt(world, parsedCoords.lon, parsedCoords.lat);
+    const ref = {
+      kind: 'point',
+      iso2: country ? getCountryDetails(country.name)?.iso2 || null : null,
+    };
     return {
       lat: parsedCoords.lat,
       lon: parsedCoords.lon,
-      label: country ? country.name : 'Océano / mar abierto',
-      countryName: country ? country.name : null,
+      label: labelFromRef(ref, lang),
+      ref,
     };
   }
 
-  const normalized = normalizeText(trimmed);
   const city =
-    cityIndex.find((c) => c.normalizedName === normalized) ||
-    cityIndex.find((c) => c.normalizedName.startsWith(normalized)) ||
-    (normalized.length > 2 && cityIndex.find((c) => c.normalizedName.includes(normalized)));
+    cityIndex.find((c) => c.search.includes(normalized)) ||
+    cityIndex.find((c) => c.search.some((term) => term.startsWith(normalized))) ||
+    (normalized.length > 2 &&
+      cityIndex.find((c) => c.search.some((term) => term.includes(normalized))));
 
   if (city) {
+    const ref = { kind: 'city', id: city.id };
     return {
       lat: city.lat,
       lon: city.lon,
-      label: `${cityName(city, DEFAULT_LANG)}, ${cityCountry(city, DEFAULT_LANG)}`,
-      countryName: cityCountry(city, DEFAULT_LANG),
+      label: cityLabel(city, lang),
+      ref,
     };
   }
 
-  const searchableCountries = world.countries.filter((c) => c.main);
-  const country =
-    searchableCountries.find((c) => normalizeText(c.name) === normalized) ||
-    searchableCountries.find((c) => normalizeText(c.name).startsWith(normalized)) ||
-    (normalized.length > 2 && searchableCountries.find((c) => normalizeText(c.name).includes(normalized)));
+  const searchableCountries = world.countries
+    .filter((c) => c.main)
+    .map((country) => ({
+      country,
+      terms: [...new Set([
+        country.name,
+        countryName(country.name, 'en'),
+        countryName(country.name, 'es'),
+      ].map(normalizeText))],
+    }));
 
-  if (country) {
+  const match =
+    searchableCountries.find((item) => item.terms.includes(normalized)) ||
+    searchableCountries.find((item) => item.terms.some((term) => term.startsWith(normalized))) ||
+    (normalized.length > 2 &&
+      searchableCountries.find((item) => item.terms.some((term) => term.includes(normalized))));
+
+  if (match) {
+    const ref = {
+      kind: 'country',
+      iso2: getCountryDetails(match.country.name)?.iso2 || null,
+      approx: true,
+    };
     return {
-      lat: country.main.c[1],
-      lon: country.main.c[0],
-      label: `${country.name} (centro aprox.)`,
-      countryName: country.name,
+      lat: match.country.main.c[1],
+      lon: match.country.main.c[0],
+      label: labelFromRef(ref, lang),
+      ref,
     };
   }
 

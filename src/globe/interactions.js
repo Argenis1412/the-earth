@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { formatCoordinates } from '../geography/coordinates.js';
 import { countryAt, formatContinents } from '../geography/countries.js';
 import { poleAt } from '../geography/poles.js';
-import { t } from '../i18n/index.js';
+import { getLang, t } from '../i18n/index.js';
+import { countryName } from '../i18n/names.js';
 import { toLatLon } from './createGlobe.js';
 import { drawCountryPath } from './mapTextures.js';
 
@@ -88,8 +89,9 @@ export function setupInteractions({ globe, world, tooltipEl, onGlobeClick, poleM
       } else if (coords) {
         const country = countryAt(world, coords.lon, coords.lat);
         setHighlight(country);
+        const lang = getLang();
         tooltipEl.innerHTML = country
-          ? `<b>${country.name}</b><span>${formatContinents(country)} · ${formatCoordinates(coords.lat, coords.lon)}</span>`
+          ? `<b>${countryName(country.name, lang)}</b><span>${formatContinents(country, lang)} · ${formatCoordinates(coords.lat, coords.lon)}</span>`
           : `<b>${t('place.ocean')}</b><span>${formatCoordinates(coords.lat, coords.lon)}</span>`;
       } else {
         hideTip();

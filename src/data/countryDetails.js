@@ -1,4 +1,13 @@
 import { normalizeText } from '../geography/coordinates.js';
+import {
+  CAPITAL_EN,
+  CAPITAL_EN_BY_NAME,
+  CONTINENT_EN,
+  CURRENCY_EN,
+  LANGUAGE_EN,
+  NAME_EN,
+  NAME_EN_BY_NAME,
+} from './countryDetails.en.js';
 
 /**
  * Detailed country information catalogue in Spanish for world countries and territories.
@@ -3276,33 +3285,86 @@ for (const country of COUNTRY_DETAILS) {
   if (country.iso3) byIso3.set(country.iso3.toUpperCase(), country);
 }
 
+for (const country of COUNTRY_DETAILS) {
+  const englishName = NAME_EN_BY_NAME[country.name] || NAME_EN[country.iso2];
+  if (englishName) byNormalizedName.set(normalizeText(englishName), country);
+}
+
 /**
- * Formats a population number into human-readable Spanish text (e.g. "47,4 M hab.").
+ * Returns a country record with its display fields in the requested language,
+ * falling back to the Spanish value when a translation is missing.
+ * @param {typeof COUNTRY_DETAILS[0]} details
+ * @param {'en' | 'es'} [lang='en']
+ * @returns {{name: string, capital: string, continent: string, languages: string[], currency: string}}
+ */
+export function getLocalizedDetails(details, lang = 'en') {
+  if (!details) return null;
+  if (lang === 'es') {
+    return {
+      name: details.name,
+      capital: details.capital,
+      continent: details.continent,
+      languages: details.languages || [],
+      currency: details.currency,
+    };
+  }
+
+  return {
+    name: NAME_EN_BY_NAME[details.name] || NAME_EN[details.iso2] || details.name,
+    capital:
+      CAPITAL_EN_BY_NAME[details.name] ||
+      CAPITAL_EN[details.iso2] ||
+      details.capital,
+    continent: CONTINENT_EN[details.continent] || details.continent,
+    languages: (details.languages || []).map((language) => LANGUAGE_EN[language] || language),
+    currency: CURRENCY_EN[details.currency] || details.currency,
+  };
+}
+
+/**
+ * Formats a population number into human-readable text in the requested language.
+ * Spanish keeps the original "47,4 M hab." style; English uses "47.4 M".
  * @param {number|null|undefined} population
- * @param {string} [locale='es-ES']
+ * @param {'en' | 'es'} [lang='en']
  * @returns {string}
  */
-export function formatPopulation(population, locale = 'es-ES') {
+export function formatPopulation(population, lang = 'en') {
   if (population === null || population === undefined || isNaN(population)) return '—';
-  if (population === 0) return 'Deshabitado';
+  if (lang === 'es') {
+    if (population === 0) return 'Deshabitado';
+    if (population >= 1_000_000_000) {
+      const val = (population / 1_000_000_000).toLocaleString('es-ES', {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 2,
+      });
+      return `${val} B hab.`;
+    }
+    if (population >= 1_000_000) {
+      const val = (population / 1_000_000).toLocaleString('es-ES', {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      });
+      return `${val} M hab.`;
+    }
+    return `${population.toLocaleString('es-ES')} hab.`;
+  }
+
+  if (population === 0) return 'Uninhabited';
   if (population >= 1_000_000_000) {
-    const val = (population / 1_000_000_000).toLocaleString(locale, {
+    const val = (population / 1_000_000_000).toLocaleString('en-US', {
       minimumFractionDigits: 1,
       maximumFractionDigits: 2,
     });
-    return `${val} B hab.`;
+    return `${val} B`;
   }
   if (population >= 1_000_000) {
-    const val = (population / 1_000_000).toLocaleString(locale, {
+    const val = (population / 1_000_000).toLocaleString('en-US', {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     });
-    return `${val} M hab.`;
+    return `${val} M`;
   }
-  if (population >= 10_000) {
-    return `${population.toLocaleString(locale)} hab.`;
-  }
-  return `${population.toLocaleString(locale)} hab.`;
+  return population.toLocaleString('en-US');
 }
 
 /**

@@ -39,3 +39,14 @@ test('searchPlaces respects the limit', () => {
   const results = searchPlaces('a', cityIndex, 'es', 3);
   assert.equal(results.length, 3);
 });
+
+test('searchPlaces matches English and Spanish city names in the active language', () => {
+  assert.equal(searchPlaces('Tokyo', cityIndex, 'en')[0].label, 'Tokyo');
+  assert.equal(searchPlaces('Tokyo', cityIndex, 'en')[0].sub, 'Japan');
+  assert.equal(searchPlaces('Tokio', cityIndex, 'es')[0].label, 'Tokio');
+  assert.equal(searchPlaces('Tokio', cityIndex, 'es')[0].sub, 'Japón');
+  assert.equal(searchPlaces('Seoul', cityIndex, 'en')[0].label, 'Seoul');
+  assert.equal(searchPlaces('Seúl', cityIndex, 'es')[0].label, 'Seúl');
+  assert.equal(searchPlaces('New York', cityIndex, 'en')[0].label, 'New York');
+  assert.equal(searchPlaces('Nueva York', cityIndex, 'es')[0].label, 'Nueva York');
+});

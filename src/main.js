@@ -70,6 +70,9 @@ async function init() {
   }
 
   const routeRenderer = createRouteRenderer(globe);
+  globe.setLanguage(getLang());
+  onLangChange((lang) => globe.setLanguage(lang));
+
   const panel = createDistancePanel({
     world,
     cities: CITIES,
@@ -131,7 +134,7 @@ async function init() {
     get state() {
       return panel.getState();
     },
-    resolve: (query) => resolveLocation(query, world, cityIndex),
+    resolve: (query) => resolveLocation(query, world, cityIndex, getLang()),
     haversine: haversineDistance,
     calculate: panel.calculate,
     setPoint: panel.setPoint,

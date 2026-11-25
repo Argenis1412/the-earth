@@ -1,4 +1,9 @@
-import { formatPopulation, getCountryDetails } from '../data/countryDetails.js';
+import {
+  formatPopulation,
+  getCountryDetails,
+  getLocalizedDetails,
+} from '../data/countryDetails.js';
+import { getLang, onLangChange } from '../i18n/index.js';
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
 
@@ -48,6 +53,23 @@ export function createCountryPanel({ world, onSetAsStop } = {}) {
    * @param {string|{name: string, main?: object}} countryTarget
    * @param {{lat: number, lon: number}|null} [coords=null]
    */
+  function render() {
+    if (!currentCountry) return;
+    const lang = getLang();
+    const details = getLocalizedDetails(currentCountry, lang);
+
+    flagEl.textContent = currentCountry.flag || '🌐';
+    nameEl.textContent = details.name;
+
+    const isoLabels = [currentCountry.iso2, currentCountry.iso3].filter(Boolean).join(' / ');
+    subEl.textContent = [details.continent, isoLabels].filter(Boolean).join(' · ');
+
+    capitalEl.textContent = details.capital || '—';
+    populationEl.textContent = formatPopulation(currentCountry.population, lang);
+    languagesEl.textContent = details.languages?.length ? details.languages.join(', ') : '—';
+    currencyEl.textContent = details.currency || '—';
+  }
+
   function show(countryTarget, coords = null) {
     const rawName = typeof countryTarget === 'string' ? countryTarget : countryTarget?.name;
     if (!rawName) return false;
@@ -69,18 +91,7 @@ export function createCountryPanel({ world, onSetAsStop } = {}) {
     }
     currentPoint = targetCoords;
 
-    // Populate data
-    flagEl.textContent = details.flag || '🌐';
-    nameEl.textContent = details.name;
-
-    const isoLabels = [details.iso2, details.iso3].filter(Boolean).join(' / ');
-    subEl.textContent = [details.continent, isoLabels].filter(Boolean).join(' · ');
-
-    capitalEl.textContent = details.capital || '—';
-    populationEl.textContent = formatPopulation(details.population);
-    languagesEl.textContent = details.languages?.length ? details.languages.join(', ') : '—';
-    currencyEl.textContent = details.currency || '—';
-
+    render();
     cardEl.hidden = false;
     cardEl.classList.add('visible');
 
@@ -102,9 +113,12 @@ export function createCountryPanel({ world, onSetAsStop } = {}) {
     onSetAsStop(slotId, {
       lat: pt.lat,
       lon: pt.lon,
-      label: currentCountry.name,
+      label: getLocalizedDetails(currentCountry, getLang()).name,
+      ref: { kind: 'country', iso2: currentCountry.iso2, approx: false },
     });
   }
+
+  onLangChange(render);
 
   btnAsA?.addEventListener('click', () => assignToStop('A'));
   btnAsB?.addEventListener('click', () => assignToStop('B'));

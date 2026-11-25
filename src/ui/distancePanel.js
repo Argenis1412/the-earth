@@ -10,7 +10,9 @@ import {
 import { countryAt, resolveLocation, searchPlaces } from '../geography/countries.js';
 import { poleAt } from '../geography/poles.js';
 import { toVec } from '../globe/createGlobe.js';
-import { getLang, t } from '../i18n/index.js';
+import { getLang, onLangChange, t } from '../i18n/index.js';
+import { labelFromRef } from '../i18n/names.js';
+import { getCountryDetails } from '../data/countryDetails.js';
 import { createAutocomplete } from './autocomplete.js';
 
 const formatNumber = (value) =>
@@ -55,6 +57,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       cssVar: 'var(--a)',
       pt: null,
       text: '',
+      error: null,
       input: $('#inA'),
       meta: $('#metaA'),
       row: document.querySelector('[data-slot="A"]'),
@@ -66,6 +69,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       cssVar: 'var(--b)',
       pt: null,
       text: '',
+      error: null,
       input: $('#inB'),
       meta: $('#metaB'),
       row: document.querySelector('[data-slot="B"]'),
@@ -143,7 +147,13 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
   }
 
   function setStopPoint(stop, resolved, options = {}) {
-    stop.pt = { lat: resolved.lat, lon: resolved.lon, label: resolved.label };
+    stop.pt = {
+      lat: resolved.lat,
+      lon: resolved.lon,
+      label: resolved.label,
+      ref: resolved.ref || null,
+    };
+    stop.error = null;
     if (options.click) {
       stop.input.value = `${resolved.lat.toFixed(4)}, ${resolved.lon.toFixed(4)}`;
     }
@@ -161,6 +171,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
   function clearStop(stop) {
     stop.pt = null;
     stop.text = '';
+    stop.error = null;
     routeRenderer.syncMarkers(stops);
     setMeta(stop, stop.emptyHint ? t(stop.emptyHint) : '');
     invalidate();
@@ -172,10 +183,11 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       clearStop(stop);
       return true;
     }
-    const resolved = resolveLocation(text, world, cityIndex);
+    const resolved = resolveLocation(text, world, cityIndex, getLang());
     if (resolved.error) {
       stop.pt = null;
       stop.text = text;
+      stop.error = { code: resolved.error, query: resolved.query };
       routeRenderer.syncMarkers(stops);
       setMeta(stop, t('error.' + resolved.error, { query: resolved.query }), true);
       invalidate();
@@ -183,6 +195,41 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     }
     setStopPoint(stop, resolved, options);
     return true;
+  }
+
+  function renderRouteLine() {
+    routeEl.textContent = '';
+    stops.forEach((stop, idx) => {
+      if (!stop.pt) return;
+      const tag = document.createElement('i');
+      tag.textContent = stop.id;
+      tag.style.color = stop.cssVar;
+      routeEl.append(tag, ` ${stop.pt.label}`);
+      if (idx < stops.length - 1) routeEl.append(' → ');
+    });
+  }
+
+  function renderStopTexts() {
+    const lang = getLang();
+    stops.forEach((stop) => {
+      if (stop.pt) {
+        if (stop.pt.ref) stop.pt.label = labelFromRef(stop.pt.ref, lang);
+        setMeta(stop, `${stop.pt.label} · ${formatCoordinates(stop.pt.lat, stop.pt.lon)}`);
+      } else if (stop.error) {
+        setMeta(stop, t(`error.${stop.error.code}`, { query: stop.error.query }, lang), true);
+      } else {
+        setMeta(stop, stop.emptyHint ? t(stop.emptyHint, {}, lang) : '');
+      }
+    });
+
+    if (resultEl.hidden) return;
+    if (stops[0]?.pt && stops[1]?.pt) {
+      const bearing = initialBearing(stops[0].pt, stops[1].pt);
+      bearingValEl.textContent = formatBearing(bearing, lang);
+    }
+    countUp = null;
+    kmValEl.textContent = formatNumber(convertDistance(currentTotalKm, currentUnit));
+    renderRouteLine();
   }
 
   function calculate() {
@@ -213,14 +260,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     globe.setRouteActive(true);
     globe.setSpin(false);
 
-    routeEl.textContent = '';
-    stops.forEach((stop, idx) => {
-      const tag = document.createElement('i');
-      tag.textContent = stop.id;
-      tag.style.color = stop.cssVar;
-      routeEl.append(tag, ` ${stop.pt.label}`);
-      if (idx < stops.length - 1) routeEl.append(' → ');
-    });
+    renderRouteLine();
 
     if (stops.length >= 2 && stops[0].pt && stops[1].pt) {
       const bearing = initialBearing(stops[0].pt, stops[1].pt);
@@ -249,17 +289,18 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     const country = countryAt(world, coords.lon, coords.lat);
     panelEl.classList.remove('collapsed');
     const currentStop = stops[activeIndex];
-    const resolved = pole
-      ? {
-          lat: pole === 'north' ? 90 : -90,
-          lon: 0,
-          label: t(`pole.${pole}.title`),
-        }
+    const ref = pole
+      ? { kind: 'pole', id: pole }
       : {
-          lat: coords.lat,
-          lon: coords.lon,
-          label: country ? country.name : t('place.ocean'),
+          kind: 'point',
+          iso2: country ? getCountryDetails(country.name)?.iso2 || null : null,
         };
+    const resolved = {
+      lat: pole === 'north' ? 90 : pole === 'south' ? -90 : coords.lat,
+      lon: pole ? 0 : coords.lon,
+      label: labelFromRef(ref, getLang()),
+      ref,
+    };
     setStopPoint(currentStop, resolved, { click: true });
     setActiveIndex((activeIndex + 1) % stops.length);
   }
@@ -369,6 +410,8 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       }
     }
   }
+
+  onLangChange(renderStopTexts);
 
   return {
     stops,

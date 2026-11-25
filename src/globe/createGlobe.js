@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { DEG_TO_RAD, cartesianToLatLon, latLonToCartesian } from '../geography/coordinates.js';
+import { DEFAULT_LANG } from '../i18n/index.js';
 import { drawBaseMap, drawCountryLabels, drawSpecMap } from './mapTextures.js';
 
 const HOME = { lat: 12, lon: -48 };
@@ -72,6 +73,45 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
   const mapTex = makeTexture(drawBaseMap(world, colors, texWidth, texWidth / 2));
   const specTex = makeTexture(drawSpecMap(world, 1024, 512), false);
   const labelTex = makeTexture(drawCountryLabels(world, texWidth, texWidth / 2));
+
+  let langTimer = 0;
+  let langInitialized = false;
+
+  function redrawLanguage(lang) {
+    const nextMap = drawBaseMap(world, colors, texWidth, texWidth / 2, lang);
+    const nextLabels = drawCountryLabels(world, texWidth, texWidth / 2, lang);
+    const oldMap = mapTex.image;
+    const oldLabels = labelTex.image;
+
+    mapTex.image = nextMap;
+    labelTex.image = nextLabels;
+    mapTex.needsUpdate = true;
+    labelTex.needsUpdate = true;
+
+    if (oldMap && oldMap !== nextMap) {
+      oldMap.width = 0;
+      oldMap.height = 0;
+    }
+    if (oldLabels && oldLabels !== nextLabels) {
+      oldLabels.width = 0;
+      oldLabels.height = 0;
+    }
+  }
+
+  /**
+   * Redraws the canvas-painted labels for the requested language.
+   * The first call is immediate; later calls are debounced.
+   * @param {'en' | 'es'} [lang]
+   */
+  function setLanguage(lang = DEFAULT_LANG) {
+    if (!langInitialized) {
+      langInitialized = true;
+      redrawLanguage(lang);
+      return;
+    }
+    clearTimeout(langTimer);
+    langTimer = setTimeout(() => redrawLanguage(lang), 120);
+  }
 
   const hlCv = Object.assign(document.createElement('canvas'), { width: 2048, height: 1024 });
   const hlCtx = hlCv.getContext('2d');
@@ -336,6 +376,7 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
   function dispose() {
     renderer.setAnimationLoop(null);
     clearTimeout(idleTimer);
+    clearTimeout(langTimer);
     removeEventListener('resize', resize);
 
     mapTex.dispose();
@@ -377,6 +418,7 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
     setRouteActive,
     flyTo,
     addUpdater,
+    setLanguage,
     dispose,
     northPoleMarker,
     southPoleMarker,

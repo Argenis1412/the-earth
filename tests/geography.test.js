@@ -25,6 +25,7 @@ import {
   resolveLocation,
 } from '../src/geography/countries.js';
 import { CITIES } from '../src/data/cities.js';
+import { labelFromRef } from '../src/i18n/names.js';
 
 const worldData = JSON.parse(
   readFileSync(new URL('../src/data/world.json', import.meta.url), 'utf8'),
@@ -155,27 +156,54 @@ test('decodeWorld and colorCountries produce valid non-conflicting country data'
 test('countryAt and formatContinents identify countries and oceans', () => {
   const brasil = countryAt(world, -49.2733, -25.4284);
   assert.equal(brasil?.name, 'Brasil');
-  assert.equal(formatContinents(brasil), 'América del Sur');
+  assert.equal(formatContinents(brasil, 'es'), 'América del Sur');
+  assert.equal(formatContinents(brasil, 'en'), 'South America');
 
   const spain = countryAt(world, -3.7038, 40.4168);
   assert.equal(spain?.name, 'España');
-  assert.equal(formatContinents(spain), 'Europa');
+  assert.equal(formatContinents(spain, 'es'), 'Europa');
 
   const ocean = countryAt(world, -30, 0);
   assert.equal(ocean, null);
 });
 
 test('resolveLocation resolves coordinates, cities, countries, and errors', () => {
-  const byCity = resolveLocation('Curitiba', world, cityIndex);
+  const byCity = resolveLocation('Curitiba', world, cityIndex, 'es');
   assert.equal(byCity.label, 'Curitiba, Brasil');
   assert.ok(Math.abs(byCity.lat - -25.4284) < 1e-6);
+  assert.deepEqual(byCity.ref, { kind: 'city', id: 'curitiba' });
 
-  const byCountry = resolveLocation('japon', world, cityIndex);
+  const byCountry = resolveLocation('japon', world, cityIndex, 'es');
   assert.equal(byCountry.label, 'Japón (centro aprox.)');
+  assert.deepEqual(byCountry.ref, { kind: 'country', iso2: 'JP', approx: true });
 
-  const byCoords = resolveLocation('-25.43, -49.27', world, cityIndex);
+  const byCoords = resolveLocation('-25.43, -49.27', world, cityIndex, 'es');
   assert.equal(byCoords.label, 'Brasil');
+  assert.deepEqual(byCoords.ref, { kind: 'point', iso2: 'BR' });
 
-  const unknown = resolveLocation('CiudadInexistenteXYZ', world, cityIndex);
+  const unknown = resolveLocation('CiudadInexistenteXYZ', world, cityIndex, 'es');
   assert.ok('error' in unknown);
+});
+
+test('resolveLocation accepts both languages for the same city', () => {
+  const english = resolveLocation('Rio de Janeiro', world, cityIndex, 'en');
+  const spanish = resolveLocation('Río de Janeiro', world, cityIndex, 'es');
+  assert.equal(english.label, 'Rio de Janeiro, Brazil');
+  assert.equal(spanish.label, 'Río de Janeiro, Brasil');
+  assert.deepEqual(english.ref, { kind: 'city', id: 'rio-de-janeiro' });
+  assert.deepEqual(spanish.ref, english.ref);
+
+  assert.equal(resolveLocation('Japan', world, cityIndex, 'en').label, 'Japan (approx. center)');
+  assert.equal(resolveLocation('Tokyo', world, cityIndex, 'es').label, 'Tokio, Japón');
+  assert.equal(resolveLocation('Tokio', world, cityIndex, 'en').label, 'Tokyo, Japan');
+});
+
+test('labelFromRef rebuilds labels in both languages', () => {
+  assert.equal(labelFromRef({ kind: 'city', id: 'tokyo' }, 'en'), 'Tokyo, Japan');
+  assert.equal(labelFromRef({ kind: 'city', id: 'tokyo' }, 'es'), 'Tokio, Japón');
+  assert.equal(labelFromRef({ kind: 'country', iso2: 'JP', approx: true }, 'en'), 'Japan (approx. center)');
+  assert.equal(labelFromRef({ kind: 'country', iso2: 'JP', approx: true }, 'es'), 'Japón (centro aprox.)');
+  assert.equal(labelFromRef({ kind: 'point', iso2: 'BR' }, 'es'), 'Brasil');
+  assert.equal(labelFromRef({ kind: 'point', iso2: null }, 'en'), 'Open ocean');
+  assert.equal(labelFromRef({ kind: 'pole', id: 'north' }, 'es'), 'Polo Norte');
 });
