@@ -170,12 +170,20 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
 
     if (options.fly) {
       globe.setSpin(false);
-      globe.flyTo(toVec(resolved.lat, resolved.lon), Math.min(globe.camera.position.length(), 2.6));
+      if (options.gentleZoom) {
+        // Center on the selected point, changing zoom by at most 10%.
+        const distance = Math.max(1.3, globe.camera.position.length() * 0.9);
+        globe.flyTo(toVec(resolved.lat, resolved.lon), distance);
+      } else {
+        globe.flyTo(toVec(resolved.lat, resolved.lon), Math.min(globe.camera.position.length(), 2.6));
+      }
     }
 
     const other = stops.find((item) => item !== stop);
     if (options.fillInput && other && !other.pt) setActiveIndex(stops.indexOf(other));
-    if (options.recalculate && stops.every((item) => item.pt)) calculate();
+    if (options.recalculate && stops.every((item) => item.pt)) {
+      calculate({ preserveCamera: options.gentleZoom });
+    }
   }
 
   function clearStop(stop) {
@@ -248,7 +256,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     renderRouteLine();
   }
 
-  function calculate() {
+  function calculate(options = {}) {
     for (const stop of stops) {
       const text = stop.input.value.trim();
       if (text && (text !== stop.text || !stop.pt)) {
@@ -295,7 +303,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       6.5,
       Math.max(1.45, Math.cos(phi) + Math.sin(phi) / k, 1 / Math.cos(Math.min(phi * 0.95, 1.25))),
     );
-    globe.flyTo(route.mid, dist, 1.6);
+    if (!options.preserveCamera) globe.flyTo(route.mid, dist, 1.6);
 
     return totalKm;
   }
