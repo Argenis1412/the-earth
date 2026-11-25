@@ -84,7 +84,10 @@ export function createRouteRenderer(globe) {
       const marker = ensureMarker(stop);
       if (stop.pt) {
         marker.position.copy(toVec(stop.pt.lat, stop.pt.lon, 1.002));
-        marker.lookAt(toVec(stop.pt.lat, stop.pt.lon, 2));
+        marker.quaternion.setFromUnitVectors(
+          new THREE.Vector3(0, 0, 1),
+          toVec(stop.pt.lat, stop.pt.lon, 1).normalize(),
+        );
         marker.visible = true;
       } else {
         marker.visible = false;

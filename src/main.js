@@ -97,6 +97,7 @@ async function init() {
     globe,
     world,
     tooltipEl: $('#tip'),
+    poleMarkers: [globe.northPoleMarker, globe.southPoleMarker],
     onGlobeClick: (coords) => {
       // Fill calculator slot as before
       panel.handleGlobeClick(coords);

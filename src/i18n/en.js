@@ -50,6 +50,10 @@ const en = {
     'Great-circle distance · Haversine formula, mean radius 6371 km',
 
   'place.ocean': 'Open ocean',
+  'pole.north.title': 'North Pole',
+  'pole.north.sub': '90°N · Arctic Ocean · floating sea ice',
+  'pole.south.title': 'South Pole',
+  'pole.south.sub': '90°S · Antarctica · Amundsen–Scott Station',
   'error.COORDS_OUT_OF_RANGE': 'Coordinates out of range (lat ±90, lon ±180)',
   'error.NOT_FOUND': 'I can’t find “{query}”. Try another city, a country or “lat, lon”.',
 };

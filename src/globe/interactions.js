@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { formatCoordinates } from '../geography/coordinates.js';
 import { countryAt, formatContinents } from '../geography/countries.js';
+import { poleAt } from '../geography/poles.js';
 import { t } from '../i18n/index.js';
 import { toLatLon } from './createGlobe.js';
 import { drawCountryPath } from './mapTextures.js';
@@ -14,23 +15,34 @@ const projectHighlight = (lon, lat) => [((lon + 180) / 360) * 2048, ((90 - lat) 
  *   world: object,
  *   tooltipEl: HTMLElement,
  *   onGlobeClick: (coords: {lat: number, lon: number}) => void,
+ *   poleMarkers?: THREE.Object3D[],
  * }} options
  */
-export function setupInteractions({ globe, world, tooltipEl, onGlobeClick }) {
+export function setupInteractions({ globe, world, tooltipEl, onGlobeClick, poleMarkers = [] }) {
   const { canvasEl, camera, earth, hlCtx, hlTex } = globe;
   const raycaster = new THREE.Raycaster();
+  raycaster.params.Line.threshold = 0.02;
   const ndc = new THREE.Vector2();
 
-  function pick(event) {
+  function cast(event) {
     const rect = canvasEl.getBoundingClientRect();
     ndc.set(
       ((event.clientX - rect.left) / rect.width) * 2 - 1,
       -((event.clientY - rect.top) / rect.height) * 2 + 1,
     );
     raycaster.setFromCamera(ndc, camera);
-    const hit = raycaster.intersectObject(earth, false)[0];
-    return hit ? toLatLon(hit.point) : null;
+    const earthHit = raycaster.intersectObject(earth, false)[0] || null;
+    const rawMarkerHit = poleMarkers.length
+      ? raycaster.intersectObjects(poleMarkers, true)[0] || null
+      : null;
+    const markerHit =
+      rawMarkerHit && rawMarkerHit.distance <= (earthHit ? earthHit.distance : Infinity)
+        ? rawMarkerHit
+        : null;
+    return { earthHit, markerHit };
   }
+
+  const markerPole = (markerHit) => (markerHit.point.y >= 0 ? 'north' : 'south');
 
   let hoveredCountry = null;
 
@@ -62,16 +74,28 @@ export function setupInteractions({ globe, world, tooltipEl, onGlobeClick }) {
     moveRaf = requestAnimationFrame(() => {
       moveRaf = 0;
       const e = lastMove;
-      const coords = pick(e);
-      if (!coords) {
+      const { earthHit, markerHit } = cast(e);
+      const coords = earthHit ? toLatLon(earthHit.point) : null;
+      const poleId = markerHit
+        ? markerPole(markerHit)
+        : coords
+          ? poleAt(coords.lat)
+          : null;
+
+      if (poleId) {
+        setHighlight(null);
+        tooltipEl.innerHTML = `<b>${t(`pole.${poleId}.title`)}</b><span>${t(`pole.${poleId}.sub`)}</span>`;
+      } else if (coords) {
+        const country = countryAt(world, coords.lon, coords.lat);
+        setHighlight(country);
+        tooltipEl.innerHTML = country
+          ? `<b>${country.name}</b><span>${formatContinents(country)} · ${formatCoordinates(coords.lat, coords.lon)}</span>`
+          : `<b>${t('place.ocean')}</b><span>${formatCoordinates(coords.lat, coords.lon)}</span>`;
+      } else {
         hideTip();
         return;
       }
-      const country = countryAt(world, coords.lon, coords.lat);
-      setHighlight(country);
-      tooltipEl.innerHTML = country
-        ? `<b>${country.name}</b><span>${formatContinents(country)} · ${formatCoordinates(coords.lat, coords.lon)}</span>`
-        : `<b>${t('place.ocean')}</b><span>${formatCoordinates(coords.lat, coords.lon)}</span>`;
+
       tooltipEl.style.left = `${e.clientX}px`;
       tooltipEl.style.top = `${e.clientY}px`;
       tooltipEl.style.opacity = '1';
@@ -92,7 +116,12 @@ export function setupInteractions({ globe, world, tooltipEl, onGlobeClick }) {
     const dt = performance.now() - downState.t;
     downState = null;
     if (moved < 6 && dt < 600) {
-      const coords = pick(event);
+      const { earthHit, markerHit } = cast(event);
+      const coords = markerHit
+        ? { lat: markerPole(markerHit) === 'north' ? 90 : -90, lon: 0 }
+        : earthHit
+          ? toLatLon(earthHit.point)
+          : null;
       if (coords) onGlobeClick(coords);
     }
   });

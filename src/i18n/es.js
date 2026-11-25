@@ -50,6 +50,10 @@ const es = {
     'Distancia ortodrómica (círculo máximo) · fórmula de Haversine, radio medio 6371 km',
 
   'place.ocean': 'Océano / mar abierto',
+  'pole.north.title': 'Polo Norte',
+  'pole.north.sub': '90° N · Océano Ártico · hielo marino flotante',
+  'pole.south.title': 'Polo Sur',
+  'pole.south.sub': '90° S · Antártida · Base Amundsen-Scott',
   'error.COORDS_OUT_OF_RANGE': 'Coordenadas fuera de rango (lat ±90, lon ±180)',
   'error.NOT_FOUND': 'No encuentro «{query}». Prueba otra ciudad, un país o «lat, lon».',
 };

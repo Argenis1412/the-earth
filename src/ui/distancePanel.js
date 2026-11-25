@@ -8,6 +8,7 @@ import {
   initialBearing,
 } from '../geography/coordinates.js';
 import { countryAt, resolveLocation } from '../geography/countries.js';
+import { poleAt } from '../geography/poles.js';
 import { toVec } from '../globe/createGlobe.js';
 import { getLang, t } from '../i18n/index.js';
 
@@ -248,18 +249,22 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
   }
 
   function handleGlobeClick(coords) {
+    const pole = poleAt(coords.lat);
     const country = countryAt(world, coords.lon, coords.lat);
     panelEl.classList.remove('collapsed');
     const currentStop = stops[activeIndex];
-    setStopPoint(
-      currentStop,
-      {
-        lat: coords.lat,
-        lon: coords.lon,
-        label: country ? country.name : t('place.ocean'),
-      },
-      { click: true },
-    );
+    const resolved = pole
+      ? {
+          lat: pole === 'north' ? 90 : -90,
+          lon: 0,
+          label: t(`pole.${pole}.title`),
+        }
+      : {
+          lat: coords.lat,
+          lon: coords.lon,
+          label: country ? country.name : t('place.ocean'),
+        };
+    setStopPoint(currentStop, resolved, { click: true });
     setActiveIndex((activeIndex + 1) % stops.length);
   }
 
