@@ -1,0 +1,126 @@
+import './styles.css';
+import { CITIES } from './data/cities.js';
+import { haversineDistance } from './geography/coordinates.js';
+import {
+  colorCountries,
+  countryAt,
+  createCityIndex,
+  decodeWorld,
+  resolveLocation,
+} from './geography/countries.js';
+import { createGlobe } from './globe/createGlobe.js';
+import { setupInteractions } from './globe/interactions.js';
+import { createRouteRenderer } from './globe/routeRenderer.js';
+import { createDistancePanel } from './ui/distancePanel.js';
+import { createCountryPanel } from './ui/countryPanel.js';
+
+const $ = (selector) => document.querySelector(selector);
+const loadingEl = $('#loading');
+
+const showFailure = (message) => {
+  loadingEl.innerHTML = `<div style="max-width:36ch;text-align:center;line-height:1.5">${message}</div>`;
+};
+
+async function init() {
+  const { default: worldData } = await import('./data/world.json');
+  const world = decodeWorld(worldData);
+  const colors = colorCountries(world);
+  const cityIndex = createCityIndex(CITIES);
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let globe;
+  let interactions;
+
+  try {
+    globe = createGlobe({
+      container: $('#stage'),
+      world,
+      colors,
+      reduceMotion,
+      spinBtn: $('#btnSpin'),
+      resetBtn: $('#btnReset'),
+      onControlsStart: () => interactions?.hideTip(),
+    });
+  } catch (error) {
+    console.error(error);
+    showFailure('Tu navegador no pudo iniciar WebGL.');
+    return;
+  }
+
+  const routeRenderer = createRouteRenderer(globe);
+  const panel = createDistancePanel({
+    world,
+    cities: CITIES,
+    cityIndex,
+    globe,
+    routeRenderer,
+    reduceMotion,
+  });
+
+  // Country detail card — wired to both globe clicks and the calculator
+  const countryPanel = createCountryPanel({
+    world,
+    onSetAsStop: (slotId, point) => {
+      panel.setPoint(slotId, point, { fly: true });
+      // Expand the calculator panel if collapsed
+      const panelEl = $('#panel');
+      if (panelEl?.classList.contains('collapsed')) {
+        panelEl.classList.remove('collapsed');
+        $('#btnCollapse')?.setAttribute('aria-expanded', 'true');
+      }
+    },
+  });
+
+  interactions = setupInteractions({
+    globe,
+    world,
+    tooltipEl: $('#tip'),
+    onGlobeClick: (coords) => {
+      // Fill calculator slot as before
+      panel.handleGlobeClick(coords);
+
+      // Show country detail card if a country was clicked
+      const country = countryAt(world, coords.lon, coords.lat);
+      if (country) {
+        countryPanel.show(country, { lat: coords.lat, lon: coords.lon });
+      } else {
+        countryPanel.hide();
+      }
+    },
+  });
+
+  panel.restoreFromUrl(window.location.search);
+  window.addEventListener('popstate', () => {
+    panel.restoreFromUrl(window.location.search);
+  });
+
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => loadingEl.classList.add('done')),
+  );
+
+  // Debug hook preserving compatibility with the original monolith
+  window.__globe = {
+    THREE: globe.THREE,
+    scene: globe.scene,
+    camera: globe.camera,
+    controls: globe.controls,
+    stops: panel.stops,
+    get state() {
+      return panel.getState();
+    },
+    resolve: (query) => resolveLocation(query, world, cityIndex),
+    haversine: haversineDistance,
+    calculate: panel.calculate,
+    setPoint: panel.setPoint,
+    countryAt: (lon, lat) => countryAt(world, lon, lat),
+    G: world,
+    setSpin: globe.setSpin,
+    countryPanel,
+    poleMarkers: { north: globe.northPoleMarker, south: globe.southPoleMarker },
+  };
+}
+
+init().catch((error) => {
+  console.error(error);
+  showFailure('No se pudo inicializar el globo terráqueo.');
+});
