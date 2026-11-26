@@ -44,6 +44,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
   const routeEl = $('#route');
   const btnShareRoute = $('#btnShareRoute');
   const shareToast = $('#shareToast');
+  const hintEl = $('#hint');
   const unitButtons = document.querySelectorAll('#result .unit-btn');
 
   /**
@@ -140,6 +141,11 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     stop.meta.classList.toggle('err', Boolean(isError));
   }
 
+  function syncHint() {
+    const hasText = stops.some((stop) => stop.input.value.trim());
+    hintEl.classList.toggle('is-hidden', hasText || !resultEl.hidden);
+  }
+
   function invalidate() {
     routeRenderer.clearRoute();
     countUp = null;
@@ -147,6 +153,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     globe.setRouteActive(false);
     resultEl.hidden = true;
     updateUrlParams();
+    syncHint();
   }
 
   function setStopPoint(stop, resolved, options = {}) {
@@ -298,6 +305,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     }
 
     resultEl.hidden = false;
+    syncHint();
     const targetVal = convertDistance(totalKm, currentUnit);
     countUp = { t: 0, to: targetVal };
     updateUrlParams();
@@ -313,11 +321,9 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     return totalKm;
   }
 
-  function handleGlobeClick(coords) {
+  function resolveGlobePoint(coords) {
     const pole = poleAt(coords.lat);
     const country = countryAt(world, coords.lon, coords.lat);
-    panelEl.classList.remove('collapsed');
-    const currentStop = stops[activeIndex];
     const ref = pole
       ? { kind: 'pole', id: pole }
       : {
@@ -330,8 +336,54 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
       label: labelFromRef(ref, getLang()),
       ref,
     };
+    return resolved;
+  }
+
+  function handleGlobeClick(coords) {
+    panelEl.classList.remove('collapsed');
+    const currentStop = stops[activeIndex];
+    const resolved = resolveGlobePoint(coords);
     setStopPoint(currentStop, resolved, { click: true });
     setActiveIndex((activeIndex + 1) % stops.length);
+  }
+
+  function dragStopPoint(slotId, coords, phase) {
+    const index = findStopIndex(slotId);
+    if (index === -1) return;
+    const stop = stops[index];
+
+    if (phase === 'start') {
+      setActiveIndex(index);
+      invalidate();
+      return;
+    }
+    if (!coords) {
+      if (phase === 'end' && stops.every((item) => item.pt)) {
+        calculate({ preserveCamera: true });
+      } else if (phase === 'end') {
+        updateUrlParams();
+      }
+      return;
+    }
+
+    const resolved = resolveGlobePoint(coords);
+    stop.pt = {
+      lat: resolved.lat,
+      lon: resolved.lon,
+      label: resolved.label,
+      ref: resolved.ref,
+    };
+    stop.error = null;
+    stop.linkedInput = false;
+    stop.input.value = `${resolved.lat.toFixed(4)}, ${resolved.lon.toFixed(4)}`;
+    stop.text = stop.input.value;
+    setMeta(stop, `${resolved.label} · ${formatCoordinates(resolved.lat, resolved.lon)}`);
+    routeRenderer.syncMarkers(stops);
+
+    if (phase === 'end') {
+      if (stops.every((item) => item.pt)) calculate({ preserveCamera: true });
+      else updateUrlParams();
+    }
   }
 
   globe.addUpdater((dt) => {
@@ -364,6 +416,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     stop.input.addEventListener('focus', () => setActiveIndex(idx));
     stop.input.addEventListener('input', () => {
       stop.linkedInput = false;
+      syncHint();
     });
     stop.input.addEventListener('change', () => commitStop(stop, { fly: true }));
     stop.input.addEventListener('keydown', (e) => {
@@ -449,6 +502,7 @@ export function createDistancePanel({ world, cities, cityIndex, globe, routeRend
     stops,
     calculate,
     handleGlobeClick,
+    dragStopPoint,
     restoreFromUrl,
     setPoint: (slotId, resolved, options) => {
       const idx = findStopIndex(slotId);

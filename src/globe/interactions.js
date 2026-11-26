@@ -16,14 +16,31 @@ const projectHighlight = (lon, lat) => [((lon + 180) / 360) * 2048, ((90 - lat) 
  *   world: object,
  *   tooltipEl: HTMLElement,
  *   onGlobeClick: (coords: {lat: number, lon: number}) => void,
+ *   getDraggableMarkers?: () => THREE.Object3D[],
+ *   onMarkerDrag?: (slotId: string, coords: {lat: number, lon: number} | null, phase: 'start' | 'move' | 'end') => void,
  *   poleMarkers?: THREE.Object3D[],
  * }} options
  */
-export function setupInteractions({ globe, world, tooltipEl, onGlobeClick, poleMarkers = [] }) {
+export function setupInteractions({
+  globe,
+  world,
+  tooltipEl,
+  onGlobeClick,
+  getDraggableMarkers = () => [],
+  onMarkerDrag,
+  poleMarkers = [],
+}) {
   const { canvasEl, camera, earth, hlCtx, hlTex } = globe;
   const raycaster = new THREE.Raycaster();
   raycaster.params.Line.threshold = 0.02;
   const ndc = new THREE.Vector2();
+
+  const titleHintEl = document.querySelector('#title p');
+  canvasEl.addEventListener(
+    'pointerdown',
+    () => titleHintEl?.classList.add('is-hidden'),
+    { once: true, capture: true },
+  );
 
   function cast(event) {
     const rect = canvasEl.getBoundingClientRect();
@@ -40,10 +57,22 @@ export function setupInteractions({ globe, world, tooltipEl, onGlobeClick, poleM
       rawMarkerHit && rawMarkerHit.distance <= (earthHit ? earthHit.distance : Infinity)
         ? rawMarkerHit
         : null;
-    return { earthHit, markerHit };
+    const stopMarkers = getDraggableMarkers();
+    const rawStopHit = stopMarkers.length ? raycaster.intersectObjects(stopMarkers, true)[0] || null : null;
+    const stopHit =
+      rawStopHit && rawStopHit.distance <= (earthHit ? earthHit.distance : Infinity)
+        ? rawStopHit
+        : null;
+    return { earthHit, markerHit, stopHit };
   }
 
   const markerPole = (markerHit) => (markerHit.point.y >= 0 ? 'north' : 'south');
+
+  function stopIdForHit(hit) {
+    let object = hit?.object;
+    while (object && object.userData.stopId === undefined) object = object.parent;
+    return object?.userData.stopId ?? null;
+  }
 
   let hoveredCountry = null;
 
@@ -63,6 +92,7 @@ export function setupInteractions({ globe, world, tooltipEl, onGlobeClick, poleM
     tooltipEl.style.opacity = '0';
     setHighlight(null);
     canvasEl.classList.remove('pointing');
+    canvasEl.classList.remove('draggable');
   }
 
   let moveRaf = 0;
@@ -75,7 +105,8 @@ export function setupInteractions({ globe, world, tooltipEl, onGlobeClick, poleM
     moveRaf = requestAnimationFrame(() => {
       moveRaf = 0;
       const e = lastMove;
-      const { earthHit, markerHit } = cast(e);
+      const { earthHit, markerHit, stopHit } = cast(e);
+      canvasEl.classList.toggle('draggable', Boolean(stopHit));
       const coords = earthHit ? toLatLon(earthHit.point) : null;
       const poleId = markerHit
         ? markerPole(markerHit)
@@ -108,11 +139,52 @@ export function setupInteractions({ globe, world, tooltipEl, onGlobeClick, poleM
   canvasEl.addEventListener('pointerleave', hideTip);
 
   let downState = null;
+  let dragState = null;
   canvasEl.addEventListener('pointerdown', (event) => {
     downState = { x: event.clientX, y: event.clientY, t: performance.now(), button: event.button };
-  });
+    if (event.button !== 0 || !onMarkerDrag) return;
+    const { stopHit } = cast(event);
+    const stopId = stopIdForHit(stopHit);
+    if (!stopId) return;
+
+    dragState = { pointerId: event.pointerId, stopId, coords: null };
+    canvasEl.classList.remove('draggable');
+    canvasEl.classList.add('dragging-marker');
+    canvasEl.setPointerCapture(event.pointerId);
+    onMarkerDrag(stopId, null, 'start');
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
+
+  canvasEl.addEventListener('pointermove', (event) => {
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const { earthHit } = cast(event);
+    if (!earthHit) return;
+    dragState.coords = toLatLon(earthHit.point);
+    onMarkerDrag(dragState.stopId, dragState.coords, 'move');
+  }, true);
+
+  function finishMarkerDrag(event) {
+    if (!dragState || dragState.pointerId !== event.pointerId) return false;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const drag = dragState;
+    dragState = null;
+    const { earthHit } = cast(event);
+    const coords = earthHit ? toLatLon(earthHit.point) : drag.coords;
+    onMarkerDrag(drag.stopId, coords, 'end');
+    canvasEl.classList.remove('dragging-marker');
+    if (canvasEl.hasPointerCapture(event.pointerId)) {
+      canvasEl.releasePointerCapture(event.pointerId);
+    }
+    downState = null;
+    return true;
+  }
 
   canvasEl.addEventListener('pointerup', (event) => {
+    if (finishMarkerDrag(event)) return;
     if (!downState || downState.button !== 0) return;
     const moved = Math.hypot(event.clientX - downState.x, event.clientY - downState.y);
     const dt = performance.now() - downState.t;
@@ -127,6 +199,7 @@ export function setupInteractions({ globe, world, tooltipEl, onGlobeClick, poleM
       if (coords) onGlobeClick(coords);
     }
   });
+  canvasEl.addEventListener('pointercancel', finishMarkerDrag, true);
 
   return { hideTip };
 }

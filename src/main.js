@@ -105,6 +105,8 @@ async function init() {
     globe,
     world,
     tooltipEl: $('#tip'),
+    getDraggableMarkers: routeRenderer.getMarkerObjects,
+    onMarkerDrag: panel.dragStopPoint,
     poleMarkers: [globe.northPoleMarker, globe.southPoleMarker],
     onGlobeClick: (coords) => {
       // Fill calculator slot as before

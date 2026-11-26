@@ -67,6 +67,7 @@ export function createRouteRenderer(globe) {
   function ensureMarker(stop) {
     if (!markers.has(stop.id)) {
       const marker = createMarkerMesh(stop.id, stop.color);
+      marker.userData.stopId = stop.id;
       markers.set(stop.id, marker);
       scene.add(marker);
     }
@@ -256,6 +257,7 @@ export function createRouteRenderer(globe) {
 
   return {
     syncMarkers,
+    getMarkerObjects: () => [...markers.values()],
     buildRoute,
     clearRoute,
     hasRoute: () => Boolean(activeRoute),

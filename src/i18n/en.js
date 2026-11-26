@@ -1,7 +1,7 @@
 const en = {
   'app.title': 'Interactive globe',
   'app.heading': 'Globe',
-  'app.hint': 'Drag to rotate · scroll or pinch to zoom · click to mark points',
+  'app.hint': 'Drag to rotate · drag A/B to move points · scroll or pinch to zoom · click to mark',
   'app.loading': 'Drawing the map…',
   'app.webglError': 'Your browser could not start WebGL.',
   'app.initError': 'The globe could not be initialized.',
@@ -47,7 +47,9 @@ const en = {
   'result.share': 'Share link',
   'result.copied': 'Link copied!',
   'result.note':
-    'Great-circle distance · Haversine formula, mean radius 6371 km',
+    'Great-circle distance · Haversine',
+  'result.noteTitle':
+    'Great-circle distance using the Haversine formula, mean radius 6371 km',
 
   'place.ocean': 'Open ocean',
   'place.approxCenter': '{name} (approx. center)',

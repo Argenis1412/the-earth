@@ -1,7 +1,7 @@
 const es = {
   'app.title': 'Globo terráqueo interactivo',
   'app.heading': 'Globo terráqueo',
-  'app.hint': 'Arrastra para girar · rueda o pellizco para acercar · clic para marcar puntos',
+  'app.hint': 'Arrastra para girar · arrastra A/B para mover puntos · rueda o pellizco para acercar · clic para marcar',
   'app.loading': 'Dibujando el mapa…',
   'app.webglError': 'Tu navegador no pudo iniciar WebGL.',
   'app.initError': 'No se pudo inicializar el globo terráqueo.',
@@ -47,7 +47,9 @@ const es = {
   'result.share': 'Compartir enlace',
   'result.copied': '¡Enlace copiado!',
   'result.note':
-    'Distancia ortodrómica (círculo máximo) · fórmula de Haversine, radio medio 6371 km',
+    'Distancia ortodrómica · Haversine',
+  'result.noteTitle':
+    'Distancia ortodrómica con la fórmula de Haversine, radio medio 6371 km',
 
   'place.ocean': 'Océano / mar abierto',
   'place.approxCenter': '{name} (centro aprox.)',
