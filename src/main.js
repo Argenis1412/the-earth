@@ -11,6 +11,7 @@ import {
 import { createGlobe } from './globe/createGlobe.js';
 import { setupInteractions } from './globe/interactions.js';
 import { createRouteRenderer } from './globe/routeRenderer.js';
+import { createSolarSystem } from './solar/createSolarSystem.js';
 import { createDistancePanel } from './ui/distancePanel.js';
 import { createCountryPanel } from './ui/countryPanel.js';
 import { applyStaticTranslations } from './i18n/dom.js';
@@ -72,6 +73,15 @@ async function init() {
   const routeRenderer = createRouteRenderer(globe);
   globe.setLanguage(getLang());
   onLangChange((lang) => globe.setLanguage(lang));
+
+  // Sun, planets and Moon around the Earth (the default view stays on the Earth)
+  const solar = createSolarSystem({ globe, reduceMotion });
+  globe.setSunWorldDirection(solar.sunDirection);
+  solar.setLanguage(getLang());
+  onLangChange((lang) => solar.setLanguage(lang));
+  $('#btnSystem')?.addEventListener('click', () =>
+    globe.flyTo(solar.overviewDirection, solar.overviewDistance, 2.4),
+  );
 
   const panel = createDistancePanel({
     world,
@@ -149,6 +159,7 @@ async function init() {
     G: world,
     setSpin: globe.setSpin,
     countryPanel,
+    solar,
     poleMarkers: { north: globe.northPoleMarker, south: globe.southPoleMarker },
   };
 }

@@ -35,7 +35,8 @@ const wrapDeg = (deg) => ((((deg + 180) % 360) + 360) % 360) - 180;
  * @param {number} e eccentricity (0 ≤ e < 1)
  */
 export function solveKepler(M, e) {
-  let E = e < 0.8 ? M : Math.PI;
+  // Danby's starting value keeps Newton convergent even for e close to 1.
+  let E = e < 0.8 ? M : M + Math.sign(Math.sin(M) || 1) * 0.85 * e;
   for (let i = 0; i < 30; i++) {
     const dE = (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
     E -= dE;
@@ -112,6 +113,22 @@ export function orbitPoints(id, T, segments = 256) {
   return points;
 }
 
+const MOON_A_KM = 384399;
+const MOON_E = 0.0549;
+
+/** Mean orbital elements of the Moon at T (angles in radians, mean anomaly in degrees). */
+function moonElements(T) {
+  const L = 218.3164477 + 481267.88123421 * T; // mean longitude
+  const Mdeg = 134.9633964 + 477198.8675055 * T; // mean anomaly
+  const Odeg = 125.0445479 - 1934.1362891 * T; // ascending node
+  return {
+    I: 5.145396 * DEG,
+    O: Odeg * DEG,
+    w: (L - Mdeg - Odeg) * DEG, // argument of perigee
+    Mdeg,
+  };
+}
+
 /**
  * Geocentric position of the Moon in the J2000-ish ecliptic frame, in km.
  * Mean-element orbit with eccentricity: good to a couple of degrees, which is
@@ -119,21 +136,32 @@ export function orbitPoints(id, T, segments = 256) {
  * @param {number} T Julian centuries since J2000
  */
 export function moonGeocentricPosition(T) {
-  const L = 218.3164477 + 481267.88123421 * T; // mean longitude
-  const Mdeg = 134.9633964 + 477198.8675055 * T; // mean anomaly
-  const Odeg = 125.0445479 - 1934.1362891 * T; // ascending node
-  const wDeg = L - Mdeg; // longitude of perigee
-  const el = {
-    I: 5.145396 * DEG,
-    O: Odeg * DEG,
-    w: (wDeg - Odeg) * DEG,
-  };
-  const a = 384399;
-  const e = 0.0549;
-  const E = solveKepler(wrapDeg(Mdeg) * DEG, e);
-  const p = orbitalToEcliptic(el, a * (Math.cos(E) - e), a * Math.sqrt(1 - e * e) * Math.sin(E));
-  return p;
+  const el = moonElements(T);
+  const E = solveKepler(wrapDeg(el.Mdeg) * DEG, MOON_E);
+  return orbitalToEcliptic(
+    el,
+    MOON_A_KM * (Math.cos(E) - MOON_E),
+    MOON_A_KM * Math.sqrt(1 - MOON_E * MOON_E) * Math.sin(E),
+  );
 }
+
+/**
+ * Points along the Moon's instantaneous orbit around the Earth (ecliptic frame, km).
+ * @param {number} T
+ * @param {number} [segments]
+ */
+export function moonOrbitPoints(T, segments = 128) {
+  const el = moonElements(T);
+  const b = MOON_A_KM * Math.sqrt(1 - MOON_E * MOON_E);
+  const points = [];
+  for (let i = 0; i <= segments; i++) {
+    const E = (i / segments) * 2 * Math.PI;
+    points.push(orbitalToEcliptic(el, MOON_A_KM * (Math.cos(E) - MOON_E), b * Math.sin(E)));
+  }
+  return points;
+}
+
+export const MOON_MEAN_DISTANCE_KM = MOON_A_KM;
 
 /**
  * Converts an ecliptic-J2000 vector to the scene frame, where +Y is the Earth's

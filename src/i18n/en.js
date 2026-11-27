@@ -8,6 +8,7 @@ const en = {
 
   'tools.spin': 'Spin',
   'tools.reset': 'Reset view',
+  'tools.system': 'Solar system',
   'lang.label': 'Language',
 
   'countryCard.label': 'Country details',
@@ -50,6 +51,18 @@ const en = {
     'Great-circle distance · Haversine',
   'result.noteTitle':
     'Great-circle distance using the Haversine formula, mean radius 6371 km',
+
+  'solar.sun': 'Sun',
+  'solar.mercury': 'Mercury',
+  'solar.venus': 'Venus',
+  'solar.earth': 'Earth',
+  'solar.moon': 'Moon',
+  'solar.mars': 'Mars',
+  'solar.jupiter': 'Jupiter',
+  'solar.saturn': 'Saturn',
+  'solar.uranus': 'Uranus',
+  'solar.neptune': 'Neptune',
+  'solar.pluto': 'Pluto',
 
   'place.ocean': 'Open ocean',
   'place.approxCenter': '{name} (approx. center)',

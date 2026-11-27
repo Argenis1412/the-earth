@@ -6,6 +6,15 @@ import { drawBaseMap, drawCountryLabels, drawSpecMap } from './mapTextures.js';
 
 const HOME = { lat: 12, lon: -48 };
 const SUN_VIEW = new THREE.Vector3(-0.62, 0.5, 0.78).normalize();
+// Zooming out to see the solar system: how far the camera may go, and how the light
+// moves from the camera-fixed "headlight" (close up) to the real Sun direction (far away).
+const MAX_DISTANCE = 700;
+const LIGHT_BLEND_FROM = 9;
+const LIGHT_BLEND_TO = 40;
+const smoothstep = (a, b, x) => {
+  const k = clamp01((x - a) / (b - a));
+  return k * k * (3 - 2 * k);
+};
 const clamp01 = (x) => Math.min(Math.max(x, 0), 1);
 
 /**
@@ -50,7 +59,7 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
   container.appendChild(canvasEl);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 200);
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 12000);
   const defaultDist = () => {
     const aspect = innerWidth / innerHeight;
     return Math.min(Math.max(1.25 / (Math.tan(20 * DEG_TO_RAD) * Math.min(aspect, 1)), 3.3), 6.5);
@@ -208,11 +217,12 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
     ),
   );
 
+  const atmosphereSun = SUN_VIEW.clone();
   scene.add(
     new THREE.Mesh(
       new THREE.SphereGeometry(1.14, 96, 64),
       new THREE.ShaderMaterial({
-        uniforms: { uSun: { value: SUN_VIEW } },
+        uniforms: { uSun: { value: atmosphereSun } },
         side: THREE.BackSide,
         transparent: true,
         depthWrite: false,
@@ -241,7 +251,7 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
     for (let i = 0; i < count; i++) {
       const u = Math.random() * 2 - 1;
       const a = Math.random() * Math.PI * 2;
-      const r = 60 + Math.random() * 40;
+      const r = 4000 + Math.random() * 1000;
       const s = Math.sqrt(1 - u * u);
       positions.set([r * s * Math.cos(a), r * u, r * s * Math.sin(a)], i * 3);
     }
@@ -271,7 +281,7 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
     dampingFactor: 0.07,
     enablePan: false,
     minDistance: 1.3,
-    maxDistance: 7,
+    maxDistance: MAX_DISTANCE,
     zoomSpeed: 0.8,
     autoRotateSpeed: 0.45,
   });
@@ -343,6 +353,19 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
     if (k >= 1) flight = null;
   });
 
+  let trueSunDir = null;
+  const lightDir = new THREE.Vector3();
+  const invCameraQuat = new THREE.Quaternion();
+
+  /**
+   * Direction (world space) from the Earth towards the Sun. Once set, the light blends to it
+   * as the camera moves away, so the solar-system view is lit coherently.
+   * @param {THREE.Vector3} direction
+   */
+  function setSunWorldDirection(direction) {
+    trueSunDir = direction.clone().normalize();
+  }
+
   const clock = new THREE.Clock();
   renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 0.5);
@@ -355,7 +378,20 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
     labels.material.opacity = labelOpacity;
     labels.visible = labelOpacity > 0.01;
 
-    sun.position.copy(SUN_VIEW).applyQuaternion(camera.quaternion).multiplyScalar(10);
+    // Light: camera-fixed headlight up close, real Sun direction when zoomed far out.
+    const blend = trueSunDir ? smoothstep(LIGHT_BLEND_FROM, LIGHT_BLEND_TO, dist) : 0;
+    lightDir.copy(SUN_VIEW).applyQuaternion(camera.quaternion);
+    if (blend > 0) lightDir.lerp(trueSunDir, blend).normalize();
+    sun.position.copy(lightDir).multiplyScalar(10);
+    atmosphereSun.copy(lightDir).applyQuaternion(invCameraQuat.copy(camera.quaternion).invert());
+
+    // Keep depth precision when far away, and zoom faster the further out we are.
+    const near = Math.max(0.05, dist * 0.015);
+    if (Math.abs(near - camera.near) > camera.near * 0.05) {
+      camera.near = near;
+      camera.updateProjectionMatrix();
+    }
+    controls.zoomSpeed = Math.min(0.8 + Math.max(dist - 7, 0) * 0.03, 6);
     controls.update();
     renderer.render(scene, camera);
   });
@@ -418,6 +454,7 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
     setRouteActive,
     flyTo,
     addUpdater,
+    setSunWorldDirection,
     setLanguage,
     dispose,
     northPoleMarker,

@@ -8,6 +8,7 @@ const es = {
 
   'tools.spin': 'Rotación',
   'tools.reset': 'Restablecer vista',
+  'tools.system': 'Sistema solar',
   'lang.label': 'Idioma',
 
   'countryCard.label': 'Ficha de país',
@@ -50,6 +51,18 @@ const es = {
     'Distancia ortodrómica · Haversine',
   'result.noteTitle':
     'Distancia ortodrómica con la fórmula de Haversine, radio medio 6371 km',
+
+  'solar.sun': 'Sol',
+  'solar.mercury': 'Mercurio',
+  'solar.venus': 'Venus',
+  'solar.earth': 'Tierra',
+  'solar.moon': 'Luna',
+  'solar.mars': 'Marte',
+  'solar.jupiter': 'Júpiter',
+  'solar.saturn': 'Saturno',
+  'solar.uranus': 'Urano',
+  'solar.neptune': 'Neptuno',
+  'solar.pluto': 'Plutón',
 
   'place.ocean': 'Océano / mar abierto',
   'place.approxCenter': '{name} (centro aprox.)',

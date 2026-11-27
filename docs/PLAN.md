@@ -51,8 +51,9 @@ Conversión eclíptica → escena: `eq = Rx(ε)·ecl`, `escena = (x_eq, z_eq, �
 
 - El plano de la eclíptica queda **inclinado 23,44°** respecto al ecuador de la Tierra.
 - Los ejes de giro de los demás cuerpos se toman de los valores IAU (AR/Dec del polo norte),
-  que ya están en ese marco. Eso reproduce la inclinación de Urano (97,8°), el giro
-  retrógrado de Venus (177°) y Plutón (122°), etc., sin números mágicos.
+  que ya están en ese marco. Eso reproduce la inclinación de Urano (**97,72°** calculado vs 97,77°
+  real), el giro retrógrado de Venus (178,8° vs 177,4°) y Plutón (112,8° vs 122,5°), etc., sin números
+  mágicos. Hay un test automático que lo comprueba.
 
 ### 3.3 Escala: real para calcular, comprimida para dibujar
 
@@ -111,7 +112,7 @@ La Tierra es el baricentro Tierra–Luna (lo que da la tabla): error ≈ 4 700 k
 
 - Períodos sidéreos reales y signados: Mercurio 1407,5 h; Venus −5832,5 h; Tierra 23,934 h;
   Marte 24,623 h; Júpiter 9,925 h; Saturno 10,656 h; Urano −17,24 h; Neptuno 16,11 h;
-  Plutón −153,29 h; Sol 609 h; Luna = 1 órbita (acoplada).
+  Plutón 153,29 h (su giro "retrógrado" viene de la inclinación axial de 122,5°, no del signo); Sol 609 h; Luna = 1 órbita (acoplada).
 - **Se conservan las proporciones reales**; la escala temporal es una constante
   (`1 día terrestre = 60 s`). Resultado: Júpiter gira en ~25 s, Marte en ~62 s, Mercurio en
   ~59 min. Que Venus/Mercurio parezcan quietos **es correcto**.
