@@ -80,7 +80,7 @@ async function init() {
   solar.setLanguage(getLang());
   onLangChange((lang) => solar.setLanguage(lang));
   $('#btnSystem')?.addEventListener('click', () =>
-    globe.flyTo(solar.overviewDirection, solar.overviewDistance, 2.4),
+    globe.flyTo(solar.overviewDirection, solar.overviewDistance, 2.4, { world: true }),
   );
 
   const panel = createDistancePanel({
@@ -145,6 +145,7 @@ async function init() {
   window.__globe = {
     THREE: globe.THREE,
     scene: globe.scene,
+    earthRoot: globe.earthRoot,
     camera: globe.camera,
     controls: globe.controls,
     stops: panel.stops,

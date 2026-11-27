@@ -1,7 +1,7 @@
-const EARTH_DAY_HOURS = 23.9345;
+export const EARTH_DAY_HOURS = 23.9345;
 
 /** One Earth day lasts this many real seconds on screen; other bodies keep their true ratios. */
-export const SPIN_SECONDS_PER_EARTH_DAY = 60;
+export const SPIN_SECONDS_PER_EARTH_DAY = 90;
 
 /**
  * Angular speed (rad/s of real time) for a body with the given sidereal period.

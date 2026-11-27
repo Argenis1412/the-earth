@@ -60,7 +60,7 @@ function createMarkerMesh(letter, color) {
  * @param {ReturnType<import('./createGlobe.js').createGlobe>} globe
  */
 export function createRouteRenderer(globe) {
-  const { scene, addUpdater } = globe;
+  const { earthRoot, addUpdater } = globe;
   const markers = new Map();
   let activeRoute = null;
 
@@ -69,7 +69,7 @@ export function createRouteRenderer(globe) {
       const marker = createMarkerMesh(stop.id, stop.color);
       marker.userData.stopId = stop.id;
       markers.set(stop.id, marker);
-      scene.add(marker);
+      earthRoot.add(marker);
     }
     return markers.get(stop.id);
   }
@@ -98,7 +98,7 @@ export function createRouteRenderer(globe) {
 
   function clearRoute() {
     if (!activeRoute) return;
-    scene.remove(activeRoute.group);
+    earthRoot.remove(activeRoute.group);
     activeRoute.group.traverse((obj) => {
       obj.geometry?.dispose();
       obj.material?.dispose();
@@ -195,7 +195,7 @@ export function createRouteRenderer(globe) {
       group.add(leg.group);
     }
 
-    scene.add(group);
+    earthRoot.add(group);
     activeRoute = {
       group,
       legs,
@@ -238,7 +238,7 @@ export function createRouteRenderer(globe) {
   function dispose() {
     clearRoute();
     for (const marker of markers.values()) {
-      scene.remove(marker);
+      earthRoot.remove(marker);
       marker.traverse((obj) => {
         obj.geometry?.dispose();
         if (Array.isArray(obj.material)) {

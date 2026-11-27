@@ -96,6 +96,33 @@ export function heliocentricPosition(id, T) {
 }
 
 /**
+ * Orbital period in years from Kepler's third law (a in AU).
+ * @param {keyof typeof ELEMENTS} id
+ * @param {number} T
+ */
+export function orbitalPeriodYears(id, T = 0) {
+  return elementsAt(id, T).a ** 1.5;
+}
+
+/**
+ * Positions the planet occupied over the last `spanYears` years, newest first
+ * (index 0 is `startOffsetYears` ago). Ecliptic frame, AU. Used for trails.
+ * @param {keyof typeof ELEMENTS} id
+ * @param {number} T Julian centuries now
+ * @param {number} spanYears how far back the trail reaches
+ * @param {number} count number of samples (≥ 2)
+ * @param {number} [startOffsetYears]
+ */
+export function trailPoints(id, T, spanYears, count, startOffsetYears = 0) {
+  const points = [];
+  for (let k = 0; k < count; k++) {
+    const yearsAgo = startOffsetYears + (k / (count - 1)) * spanYears;
+    points.push(heliocentricPosition(id, T - yearsAgo / 100));
+  }
+  return points;
+}
+
+/**
  * Points along the instantaneous orbit ellipse (ecliptic frame, AU), starting at perihelion.
  * @param {keyof typeof ELEMENTS} id
  * @param {number} T

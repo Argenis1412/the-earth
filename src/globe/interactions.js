@@ -30,7 +30,10 @@ export function setupInteractions({
   onMarkerDrag,
   poleMarkers = [],
 }) {
-  const { canvasEl, camera, earth, hlCtx, hlTex } = globe;
+  const { canvasEl, camera, earth, earthRoot, hlCtx, hlTex } = globe;
+  const hitPoint = new THREE.Vector3();
+  /** World-space surface hit → lat/lon in the Earth's own (rotating) frame. */
+  const localLatLon = (point) => toLatLon(earthRoot.worldToLocal(hitPoint.copy(point)));
   const raycaster = new THREE.Raycaster();
   raycaster.params.Line.threshold = 0.02;
   const ndc = new THREE.Vector2();
@@ -107,7 +110,7 @@ export function setupInteractions({
       const e = lastMove;
       const { earthHit, markerHit, stopHit } = cast(e);
       canvasEl.classList.toggle('draggable', Boolean(stopHit));
-      const coords = earthHit ? toLatLon(earthHit.point) : null;
+      const coords = earthHit ? localLatLon(earthHit.point) : null;
       const poleId = markerHit
         ? markerPole(markerHit)
         : coords
@@ -162,7 +165,7 @@ export function setupInteractions({
     event.stopImmediatePropagation();
     const { earthHit } = cast(event);
     if (!earthHit) return;
-    dragState.coords = toLatLon(earthHit.point);
+    dragState.coords = localLatLon(earthHit.point);
     onMarkerDrag(dragState.stopId, dragState.coords, 'move');
   }, true);
 
@@ -173,7 +176,7 @@ export function setupInteractions({
     const drag = dragState;
     dragState = null;
     const { earthHit } = cast(event);
-    const coords = earthHit ? toLatLon(earthHit.point) : drag.coords;
+    const coords = earthHit ? localLatLon(earthHit.point) : drag.coords;
     onMarkerDrag(drag.stopId, coords, 'end');
     canvasEl.classList.remove('dragging-marker');
     if (canvasEl.hasPointerCapture(event.pointerId)) {
@@ -194,7 +197,7 @@ export function setupInteractions({
       const coords = markerHit
         ? { lat: markerPole(markerHit) === 'north' ? 90 : -90, lon: 0 }
         : earthHit
-          ? toLatLon(earthHit.point)
+          ? localLatLon(earthHit.point)
           : null;
       if (coords) onGlobeClick(coords);
     }

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { DEG_TO_RAD, cartesianToLatLon, latLonToCartesian } from '../geography/coordinates.js';
 import { DEFAULT_LANG } from '../i18n/index.js';
+import { EARTH_DAY_HOURS, spinRate } from '../solar/rotation.js';
 import { drawBaseMap, drawCountryLabels, drawSpecMap } from './mapTextures.js';
 
 const HOME = { lat: 12, lon: -48 };
@@ -59,6 +60,9 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
   container.appendChild(canvasEl);
 
   const scene = new THREE.Scene();
+  // Everything that belongs to the Earth's surface lives under this node so the planet can spin.
+  const earthRoot = new THREE.Group();
+  scene.add(earthRoot);
   const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 20000);
   const defaultDist = () => {
     const aspect = innerWidth / innerHeight;
@@ -136,7 +140,7 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
       shininess: 90,
     }),
   );
-  scene.add(earth);
+  earthRoot.add(earth);
 
   function createPoleMarker(label, lat) {
     const group = new THREE.Group();
@@ -195,14 +199,14 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
 
   const northPoleMarker = createPoleMarker('N', 90);
   const southPoleMarker = createPoleMarker('S', -90);
-  scene.add(northPoleMarker, southPoleMarker);
+  earthRoot.add(northPoleMarker, southPoleMarker);
 
   const addOverlay = (tex, radius, MaterialClass, extra) => {
     const mesh = new THREE.Mesh(
       new THREE.SphereGeometry(radius, 96, 64),
       new MaterialClass({ map: tex, transparent: true, depthWrite: false, ...extra }),
     );
-    scene.add(mesh);
+    earthRoot.add(mesh);
     return mesh;
   };
 
@@ -287,13 +291,15 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
   });
 
   let spinWanted = !reduceMotion;
+  let spinActive = false; // the Earth is turning right now
+  const earthSpin = spinRate(EARTH_DAY_HOURS);
   let routeActive = false;
   let idleTimer = 0;
   let flight = null;
 
   function setSpin(on) {
     spinWanted = on;
-    controls.autoRotate = on;
+    spinActive = on;
     spinBtn.setAttribute('aria-pressed', String(on));
   }
 
@@ -301,8 +307,14 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
     routeActive = active;
   }
 
-  function flyTo(direction, distance, duration = 1.5) {
+  /**
+   * Flies the camera to look at `direction` from `distance`.
+   * By default the direction is in the Earth's own frame (lat/lon vectors) and the flight
+   * keeps tracking it while the planet turns; pass { world: true } for a fixed world direction.
+   */
+  function flyTo(direction, distance, duration = 1.5, { world = false } = {}) {
     flight = {
+      local: !world,
       d0: camera.position.clone().normalize(),
       r0: camera.position.length(),
       d1: direction.clone().normalize(),
@@ -318,7 +330,7 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
 
   controls.addEventListener('start', () => {
     flight = null;
-    controls.autoRotate = false;
+    spinActive = false;
     clearTimeout(idleTimer);
     canvasEl.classList.add('grabbing');
     onControlsStart?.();
@@ -328,7 +340,7 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
     canvasEl.classList.remove('grabbing');
     clearTimeout(idleTimer);
     idleTimer = setTimeout(() => {
-      if (spinWanted && !routeActive) controls.autoRotate = true;
+      if (spinWanted && !routeActive) spinActive = true;
     }, 2500);
   });
 
@@ -337,11 +349,16 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
   const addUpdater = (fn) => updaters.push(fn);
 
   addUpdater((dt) => {
+    if (spinActive) earthRoot.rotation.y += earthSpin * dt;
+  });
+
+  addUpdater((dt) => {
     if (!flight) return;
     flight.t += dt;
     const k = clamp01(flight.t / flight.dur);
     const eased = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
-    const q = new THREE.Quaternion().setFromUnitVectors(flight.d0, flight.d1);
+    const target = flight.local ? flight.d1.clone().applyQuaternion(earthRoot.quaternion) : flight.d1;
+    const q = new THREE.Quaternion().setFromUnitVectors(flight.d0, target);
     const qi = new THREE.Quaternion().slerp(q, eased);
     camera.position.copy(
       flight.d0
@@ -363,7 +380,7 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
    * @param {THREE.Vector3} direction
    */
   function setSunWorldDirection(direction) {
-    trueSunDir = direction.clone().normalize();
+    trueSunDir = direction; // kept by reference: the solar system updates it in place (unit length)
   }
 
   const clock = new THREE.Clock();
@@ -446,6 +463,7 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
     camera,
     controls,
     renderer,
+    earthRoot,
     canvasEl,
     earth,
     hlCtx,

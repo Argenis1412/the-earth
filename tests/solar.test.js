@@ -199,3 +199,25 @@ test('catalogue is complete and every body has a name in both languages', () => 
   }
   for (const id of ORBITING_IDS) assert.ok(BODY_BY_ID[id]);
 });
+
+test('orbital periods follow Kepler III (Earth 1 yr, Jupiter 11.86 yr, Pluto 248 yr)', async () => {
+  const { orbitalPeriodYears } = await import('../src/solar/kepler.js');
+  assert.ok(Math.abs(orbitalPeriodYears('earth') - 1) < 0.001);
+  assert.ok(Math.abs(orbitalPeriodYears('jupiter') - 11.86) < 0.05);
+  assert.ok(Math.abs(orbitalPeriodYears('saturn') - 29.46) < 0.15);
+  assert.ok(Math.abs(orbitalPeriodYears('pluto') - 248) < 1.5);
+});
+
+test('trailPoints walks backwards along the orbit and ends where the planet was', async () => {
+  const { trailPoints } = await import('../src/solar/kepler.js');
+  const T = at('2026-11-26T12:00:00Z');
+  const pts = trailPoints('earth', T, 0.25, 20);
+  assert.equal(pts.length, 20);
+  const now = heliocentricPosition('earth', T);
+  assert.ok(norm(sub(pts[0], now)) < 1e-12, 'first sample is the current position');
+  // a quarter of a year back is about 90° of heliocentric longitude
+  const swept = Math.abs(angleDeg(pts[0], pts[19]));
+  assert.ok(Math.abs(swept - 90) < 3, `swept ${swept}`);
+  const offset = trailPoints('earth', T, 0.25, 5, 6 / 365.25);
+  assert.ok(norm(sub(offset[0], now)) > 0.01, 'start offset leaves a gap behind the planet');
+});
