@@ -8,7 +8,7 @@ const HOME = { lat: 12, lon: -48 };
 const SUN_VIEW = new THREE.Vector3(-0.62, 0.5, 0.78).normalize();
 // Zooming out to see the solar system: how far the camera may go, and how the light
 // moves from the camera-fixed "headlight" (close up) to the real Sun direction (far away).
-const MAX_DISTANCE = 700;
+const MAX_DISTANCE = 1200;
 const LIGHT_BLEND_FROM = 9;
 const LIGHT_BLEND_TO = 40;
 const smoothstep = (a, b, x) => {
@@ -59,7 +59,7 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
   container.appendChild(canvasEl);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 12000);
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 20000);
   const defaultDist = () => {
     const aspect = innerWidth / innerHeight;
     return Math.min(Math.max(1.25 / (Math.tan(20 * DEG_TO_RAD) * Math.min(aspect, 1)), 3.3), 6.5);
@@ -251,7 +251,7 @@ export function createGlobe({ container, world, colors, reduceMotion, spinBtn, r
     for (let i = 0; i < count; i++) {
       const u = Math.random() * 2 - 1;
       const a = Math.random() * Math.PI * 2;
-      const r = 4000 + Math.random() * 1000;
+      const r = 8000 + Math.random() * 2000;
       const s = Math.sqrt(1 - u * u);
       positions.set([r * s * Math.cos(a), r * u, r * s * Math.sin(a)], i * 3);
     }

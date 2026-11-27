@@ -19,7 +19,7 @@ import { MOON_VISUAL_ORBIT, compressVector } from './scale.js';
 import { paintBodyTexture, paintGlowTexture, paintRingTexture } from './textures.js';
 
 /** Distance from the Earth (scene units) beyond which the camera frames the whole system. */
-export const OVERVIEW_DISTANCE = 420;
+export const OVERVIEW_DISTANCE = 700;
 /** The Earth's own orbit line is cut open this far around the Earth so it doesn't skewer the globe. */
 const EARTH_ORBIT_GAP = 3;
 const ORBIT_COLOR = {
@@ -36,9 +36,18 @@ const ORBIT_COLOR = {
 /** Texture build order: the most visible bodies first. */
 const TEXTURE_ORDER = ['sun', 'moon', 'mars', 'jupiter', 'saturn', 'mercury', 'venus', 'uranus', 'neptune', 'pluto'];
 
+/** Orbit lines are invisible up close (so the default Earth view stays clean) and fade in over this range. */
+const LINES_FADE_FROM = 8;
+const LINES_FADE_TO = 18;
+/** A label is hidden once the camera is farther than this many times the body's distance from the Sun. */
+const LABEL_FAR_FACTOR = 20;
 const UP = new THREE.Vector3(0, 1, 0);
 const toV3 = ({ x, y, z }) => new THREE.Vector3(x, y, z);
 const clamp01 = (x) => Math.min(Math.max(x, 0), 1);
+const smoothstep = (a, b, x) => {
+  const k = clamp01((x - a) / (b - a));
+  return k * k * (3 - 2 * k);
+};
 
 function drawLabel(canvas, text) {
   const ctx = canvas.getContext('2d');
@@ -90,6 +99,7 @@ export function createSolarSystem({ globe, date = new Date(), reduceMotion = fal
   // --- Helpers ------------------------------------------------------------
   const disposables = [];
   const lineMaterials = [];
+  const lines = [];
   const bodies = new Map();
   const labels = [];
 
@@ -98,22 +108,20 @@ export function createSolarSystem({ globe, date = new Date(), reduceMotion = fal
     for (const p of points) flat.push(p.x, p.y, p.z);
     const geometry = new LineGeometry();
     geometry.setPositions(flat);
-    const material = new LineMaterial({
-      color,
-      linewidth: width,
-      transparent: true,
-      opacity,
-      depthWrite: false,
-    });
+    // Opaque and pre-dimmed: translucent fat lines add up at every joint and look beaded.
+    const base = new THREE.Color(color).multiplyScalar(opacity);
+    const material = new LineMaterial({ color: base.clone(), linewidth: width });
     material.resolution.set(innerWidth, innerHeight);
     const line = new Line2(geometry, material);
+    line.visible = false;
     parent.add(line);
     lineMaterials.push(material);
+    lines.push({ line, material, base });
     disposables.push(geometry, material);
     return line;
   }
 
-  function addLabel(id, parent, radius, position) {
+  function addLabel(id, parent, radius, position, farLimit = Infinity) {
     const canvas = Object.assign(document.createElement('canvas'), { width: 256, height: 64 });
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -133,7 +141,7 @@ export function createSolarSystem({ globe, date = new Date(), reduceMotion = fal
     sprite.visible = false;
     parent.add(sprite);
     disposables.push(texture, material);
-    const label = { id, sprite, canvas, texture, radius };
+    const label = { id, sprite, canvas, texture, radius, farLimit };
     labels.push(label);
     drawLabel(canvas, t(`solar.${id}`));
     texture.needsUpdate = true;
@@ -170,7 +178,7 @@ export function createSolarSystem({ globe, date = new Date(), reduceMotion = fal
       spin: reduceMotion || def.rotationHours == null ? 0 : spinRate(def.rotationHours),
     };
     bodies.set(id, body);
-    addLabel(id, group, radius);
+    addLabel(id, group, radius, undefined, id === 'sun' ? Infinity : LABEL_FAR_FACTOR * position.length());
     return body;
   }
 
@@ -255,7 +263,7 @@ export function createSolarSystem({ globe, date = new Date(), reduceMotion = fal
   moonMesh.name = 'moon';
   moonGroup.add(moonMesh);
   disposables.push(moonGeometry, moonMaterial);
-  addLabel('moon', moonGroup, moonRadius);
+  addLabel('moon', moonGroup, moonRadius, undefined, 150);
 
   const km2scene = MOON_VISUAL_ORBIT / MOON_MEAN_DISTANCE_KM;
   moonGroup.position.copy(toV3(eclipticToScene(moonGeocentricPosition(T)))).multiplyScalar(km2scene);
@@ -300,10 +308,19 @@ export function createSolarSystem({ globe, date = new Date(), reduceMotion = fal
     for (const body of bodies.values()) {
       if (body.spin) body.mesh.rotation.y += body.spin * dt;
     }
+    const fade = smoothstep(LINES_FADE_FROM, LINES_FADE_TO, camera.position.length());
+    for (const { line, material, base } of lines) {
+      line.visible = fade > 0.01;
+      if (line.visible) material.color.copy(base).multiplyScalar(fade);
+    }
     for (const label of labels) {
       label.sprite.getWorldPosition(worldPos);
       const dist = camera.position.distanceTo(worldPos);
-      const opacity = clamp01((dist - 8 * label.radius) / (4 * label.radius));
+      const near = clamp01((dist - 8 * label.radius) / (4 * label.radius));
+      const far = Number.isFinite(label.farLimit)
+        ? clamp01((label.farLimit * 1.25 - dist) / (label.farLimit * 0.25))
+        : 1;
+      const opacity = near * far;
       label.sprite.material.opacity = opacity;
       label.sprite.visible = opacity > 0.01;
     }

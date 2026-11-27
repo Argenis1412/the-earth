@@ -4,12 +4,12 @@
  */
 export const EARTH_RADIUS_KM = 6371;
 
-/** Scene units per sqrt(AU): Earth sits at 18, Neptune at ≈99, Pluto at ≈113. */
-export const ORBIT_SCALE = 18;
-/** Planet radius = (R / R_earth) ^ exponent, so Jupiter ≈ 3.7 and Pluto ≈ 0.4. */
-export const RADIUS_EXPONENT = 0.55;
+/** Scene units per sqrt(AU): Earth sits at 30, Neptune at ≈164, Pluto at ≈188. */
+export const ORBIT_SCALE = 30;
+/** Planet radius = (R / R_earth) ^ exponent, so Jupiter ≈ 2.9 and Pluto ≈ 0.5. */
+export const RADIUS_EXPONENT = 0.45;
 /** The Sun is drawn at a fixed radius (a true-ratio Sun would swallow the inner planets). */
-export const SUN_VISUAL_RADIUS = 4.5;
+export const SUN_VISUAL_RADIUS = 6;
 /** The Moon orbits at 4 Earth radii instead of the real ≈60 (which would be a speck). */
 export const MOON_VISUAL_ORBIT = 4.0;
 /** The Moon keeps its true size relative to the Earth. */

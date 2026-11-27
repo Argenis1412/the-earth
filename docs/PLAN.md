@@ -61,9 +61,9 @@ Con distancias reales Neptuno estaría a ~30 UA ≈ 700 000 radios terrestres: i
 
 | Magnitud | Visual | Fórmula |
 |---|---|---|
-| Distancia al Sol | raíz cuadrada | `d = 18 · √(UA)` unidades (Tierra→18, Neptuno→≈99, Plutón→≈113) |
-| Radio de los planetas | potencia 0,55 | `r = (R / R_tierra)^0.55` (Tierra=1, Júpiter≈3,7, Plutón≈0,4) |
-| Sol | fijo | radio 4,5 |
+| Distancia al Sol | raíz cuadrada | `d = 30 · √(UA)` unidades (Tierra→30, Neptuno→≈164, Plutón→≈188) |
+| Radio de los planetas | potencia 0,45 | `r = (R / R_tierra)^0.45` (Tierra=1, Júpiter≈2,9, Plutón≈0,5) |
+| Sol | fijo | radio 6 |
 | Luna | **comprimida** | órbita de **4,0** radios terrestres (la real son 60), radio real 0,273 |
 | Calculadora y paneles | **real** | km, UA, tiempo luz con datos reales |
 
@@ -102,11 +102,13 @@ La Tierra es el baricentro Tierra–Luna (lo que da la tabla): error ≈ 4 700 k
 
 ### 3.6 Cámara y profundidad
 
-- `far` 12 000; estrellas a radio 4 000–5 000.
+- `far` 20 000; estrellas a radio 8 000–10 000.
+  (Una primera prueba con K=18 y exponente 0,55 dejaba a Júpiter y Venus gigantes al fondo de la
+  vista inicial; por eso la escala final es más espaciada y los radios más modestos.)
 - `near` dinámico = `max(0.05, 0.015 · distancia)` para conservar precisión de z con las
   capas finas de la Tierra (etiquetas 1.0012, atmósfera 1.02).
-- `maxDistance` 700. Botón **"Sistema solar"** vuela a una vista cenital-oblicua (35° sobre la
-  eclíptica, distancia ≈ 420). **"Reset view"** vuelve a la Tierra.
+- `maxDistance` 1200. Botón **"Sistema solar"** vuela a una vista cenital-oblicua (35° sobre la
+  eclíptica, distancia ≈ 700). **"Reset view"** vuelve a la Tierra.
 
 ### 3.7 Rotaciones propias
 
@@ -187,11 +189,16 @@ Estado en URL (compatible con enlaces actuales): `?from=Mars&to=Sun`; en Fase 2 
 
 ## 8. Fases y criterios de aceptación
 
-### Fase 1 — Sistema solar estático  ← *se implementa ahora*
+### Fase 1 — Sistema solar estático  ✅ *completada*
 - Sol, Mercurio…Neptuno, **Plutón**, **Luna**, anillos de Saturno, líneas de órbita nítidas.
 - Posiciones reales de hoy; ejes y giros propios de cada cuerpo (la Tierra aún no gira, §3.7/§7).
 - Etiquetas ES/EN, chip "Sistema solar", cámara/profundidad/estrellas reescaladas, luz mezclada.
 - Tests de matemática pura; `npm test` y `npm run build` en verde.
+- **Notas de implementación:** las órbitas son líneas opacas atenuadas (las translúcidas se ven
+  punteadas) y **solo aparecen al alejar la cámara** (> 8 unidades) para no ensuciar la vista de la
+  Tierra; las etiquetas de los planetas internos se ocultan en la vista general para no amontonarse.
+  La Tierra aún no gira sobre su eje (Fase 2). Con la cámara por defecto pueden asomar por los bordes
+  la Luna o algún planeta lejano, según la fecha: es el cielo real detrás de la Tierra.
 - **Aceptación:** la vista inicial es visualmente la de siempre; al alejarse se ven todos los
   cuerpos con su fase de luz correcta; la calculadora actual sigue funcionando igual.
 

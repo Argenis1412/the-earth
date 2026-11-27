@@ -14,7 +14,7 @@ import {
   solveKepler,
 } from '../src/solar/kepler.js';
 import { BODIES, BODY_BY_ID, ORBITING_IDS, bodyVisualRadius, poleDirection } from '../src/solar/bodies.js';
-import { compressDistance, compressVector } from '../src/solar/scale.js';
+import { ORBIT_SCALE, compressDistance, compressVector } from '../src/solar/scale.js';
 import { SPIN_SECONDS_PER_EARTH_DAY, secondsPerTurn, spinRate } from '../src/solar/rotation.js';
 import en from '../src/i18n/en.js';
 import es from '../src/i18n/es.js';
@@ -142,8 +142,9 @@ test('the Moon orbits at its real distance, close to the ecliptic plane', () => 
   assert.equal(ring.length, 33);
 });
 
-test('distance compression is monotonic and anchored: Earth at 18 units', () => {
-  assert.equal(compressDistance(1), 18);
+test('distance compression is monotonic and anchored: 1 AU = ORBIT_SCALE units', () => {
+  assert.equal(ORBIT_SCALE, 30);
+  assert.equal(compressDistance(1), ORBIT_SCALE);
   assert.equal(compressDistance(0), 0);
   const au = [0.39, 0.72, 1, 1.52, 5.2, 9.58, 19.2, 30.07, 39.5];
   for (let i = 1; i < au.length; i++) assert.ok(compressDistance(au[i]) > compressDistance(au[i - 1]));
@@ -159,6 +160,7 @@ test('visual radii keep the real ordering and Earth = 1', () => {
     assert.ok(bodyVisualRadius(order[i]) > bodyVisualRadius(order[i - 1]), order[i]);
   }
   assert.ok(Math.abs(bodyVisualRadius('moon') - 0.2727) < 0.001);
+  assert.ok(bodyVisualRadius('jupiter') < 3.1, 'giants stay modest so they do not swamp the Earth view');
 });
 
 test('drawn spheres of neighbouring orbits never overlap, from perihelion to aphelion', () => {
